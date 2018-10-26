@@ -1,0 +1,87 @@
+Installing MySQL Server 8.0
+1. Download and install Microsoft Redistribute C++ 2013 x86 and x64
+	- Download x86 and x64 setups: https://www.microsoft.com/en-us/download/details.aspx?id=40784
+2. Install both x86 and x64 versions
+3. Download MySQL installer from https://dev.mysql.com/downloads/installer/
+4. Run MySQL installer and complete setup with default options. When you reach the MySQL server configuration page, set the root password as: toor
+5. Verify mysql has been added to PATH: 
+	- Open a file explorer and right click ‘Computer’ then select ‘Properties’
+	- Select ‘Advanced system settings’ then ‘Environment Variables’
+	- Under ‘System variables’ select ‘New’ then enter MYSQL_HOME in ‘Variable name’ and C:\Program Files\MySQL\MySQL Server 8.0\bin in ‘Variable value’ (change this path if you used a different installation directory)
+	- Highlight ‘Path’ under ‘User variables’ and select edit. Move your cursor to the end of ‘Variable value’ and add a semicolon then %MYSQL_HOME%
+	- Hit ‘OK’ 
+
+Testing MySQL Server (Optional)
+1. Open a terminal 
+2. Enter mysql -u root -p
+3. Enter password (toor), hit enter
+4. Enter SHOW DATABASES;
+5. Verify database schema displayed
+
+Creating Weeble Database on localhost
+1.  Open a terminal 
+2.  Enter mysql -u root -p
+3.  Enter password (toor) and hit enter
+4.  Run mysql> CREATE DATABASE weeble;
+5.  Run mysql> USE weeble;
+6.  Run mysql> CREATE TABLE Users (
+	UserID INT NOT NULL AUTO_INCREMENT,
+	UserName VARCHAR(30) NOT NULL,
+	Password VARCHAR(30) NOT NULL,
+	Email VARCHAR(30) NOT NULL,
+	IsPremium BIT NOT NULL,
+	RegistrationDate DATE NOT NULL,
+	LastLoginDate DATE,
+	PRIMARY KEY (UserID)
+); 
+7.  Run mysql> CREATE TABLE PremiumUsers (
+	UserID INT NOT NULL,
+	FirstCity VARCHAR(30),
+	SecondCity VARCHAR(30),
+	ThirdCity VARCHAR(30),
+	APICalls INT
+);
+8.  Run mysql> CREATE TABLE FreeUsers (
+	UserID INT NOT NULL,
+	FirstCity VARCHAR(30),
+ 	APICalls INT
+);
+9.  Run mysql> USE weeble;
+10. Run mysql> CREATE USER 'djangouser'@'localhost' IDENTIFIED BY 'toor';
+11. Run mysql> GRANT ALL ON django.* TO 'djangouser'@'localhost';
+
+Installing MySQL Client/Connector
+*Note If you've already set up a working virtualenv with django installed, 
+open a terminal and navigate to your project's root folder, then skip to step 6.
+1.  Open a terminal and run pip install virtualenv
+2.  Navigate to your project directory e.g. cd C:\Users\User\Weeble\
+3.  Run virtualenv weebleenv
+4.  Activate the env with .\weebleenv\Scripts\activate
+5.  Run pip install django
+6.  Create a new Django project with python -m django-admin startproject weeble
+7.  Download mysql-1.3.13 from http://www.lfd.uci.edu/~gohlke/pythonlibs/#mysql-python
+8.  Move the .whl file into your project directory
+9.  Run pip install mysqlclient-1.3.13-cp37-cp37m-win_amd64.whl 
+10.  Run pip install mysql-connector-python
+
+Testing MySQL with Django
+1. Open a terminal and navigate to your django project's directory e.g. cd C:\Users\User\Weeble\weeble
+2. Make sure the databases section of your settings.py file is updated to the following:
+DATABASES = {
+    'default': {
+        'ENGINE': 'mysql.connector.django',
+        'NAME': 'weeble',
+        'USER': 'root',
+        'PASSWORD': 'toor',
+        'HOST': '127.0.0.1',
+        'PORT': '3306',
+        'OPTIONS': {
+               'autocommit': True,
+           },
+    }
+}
+3. In the terminal and from your project's directory, run python manage.py makemigrations
+4. If there are no errors, run python manage.py migrate
+5. If there are errors, try re-activating your virtualenv with 
+   .\..\weebleenv\Scripts\deaactivate and.\..\weebleenv\Scripts\activate then try again.
+   If there are no errors and all checks are OK, MySQL and django should be in harmony.

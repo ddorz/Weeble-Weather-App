@@ -76,8 +76,7 @@ WSGI_APPLICATION = 'Weeble.wsgi.application'
 
 DATABASES = {
     'default': {
-#        'ENGINE': 'django.db.backends.mysql',
-        'ENGINER': 'mysql.connector.django',
+        'ENGINE': 'mysql.connector.django',
         'NAME': 'weeble',
         'USER': 'root',
         'PASSWORD': 'toor',
@@ -88,7 +87,6 @@ DATABASES = {
         },
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/2.1/ref/settings/#auth-password-validators
