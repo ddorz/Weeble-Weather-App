@@ -1,8 +1,8 @@
 from django.db import models
 
 # Models for the three different database tables: Users, free users, and premium users.
-# Free user/premium user models are linked to users via the userId field. In the FreeUser
-# and PremiumUser classes, userId is defined as ForeignKey to join these tables to the Users table.
+# Free user/premium user models are linked to users via the userId field. Still need to
+# get linking working properly with ForeignKey attribute
 
 
 class User(models.Model):
@@ -52,8 +52,6 @@ class User(models.Model):
     def get_last_login_date(self):
         return self.lastLoginDate
 
-#   userInfo = models.ForeignKey(FreeUser if is_free_user() else PremiumUser, on_delete=models.CASCADE)
-
 #    def __str__(self):
 #        return "%s" % (self.userName)
 
@@ -63,18 +61,16 @@ class FreeUser(models.Model):
     class Meta:
         db_table='freeusers'
 
-    # Testing how to properly link to User table.
-    #  Can delete these 2 commented lines if using UserId as a ForeignKey joins then properly
-#    user = models.ForeignKey(User, on_delete=models.CASCADE)
-#    userId = models.IntegerField(null=False, unique=True, db_column='UserID')
-    user = models.ForeignKey(User, on_delete=models.CASCADE, db_column='UserID')
+    userId = models.IntegerField(null=False, unique=True, db_column='UserID')
     freeUserId = models.AutoField(null=False, unique=True, primary_key=True, db_column='FreeUserID')
     firstCity = models.CharField(null=True, max_length=30, db_column='FirstCity')
     appCalls = models.IntegerField(null=False, default=0, db_column='APICalls')
     lastResetDate = models.DateTimeField(null=False, auto_now=False, auto_now_add=True, db_column='LastResetDate')
+    # Having issues linking with ForeignKey; tests give errors when initializing/saving objects
+#    user = models.ForeignKey(User, on_delete=models.CASCADE)
 
-    def get_user(self):
-        return self.user
+    def get_user_id(self):
+        return self.userId
 
     def get_free_user_id(self):
         return self.freeUserId
@@ -88,9 +84,6 @@ class FreeUser(models.Model):
     def get_last_reset_date(self):
         return self.lastResetDate
 
-    def get_user_name(self):
-        return self.user.userName
-
 #    def __str__(self):
 #       return "Free User: %s" % (self.userId)
 
@@ -100,20 +93,17 @@ class PremiumUser(models.Model):
     class Meta:
         db_table = 'premiumusers'
 
-    # Testing how to properly link to User table
-    # Can delete these 2 commented lines if using UserID as a ForeignKey joins then properly
-#    user = models.ForeignKey(User, on_delete=models.CASCADE)
-#    userId = models.IntegerField(null=False, unique=True, db_column='UserID')
-    user = models.ForeignKey(User, on_delete=models.CASCADE, db_column='UserID')
+    userId = models.IntegerField(null=False, unique=True, db_column='UserID')
     premiumUserId = models.AutoField(null=False, unique=True, primary_key=True, db_column='PremiumUserID')
     firstCity = models.CharField(null=True, max_length=30, db_column='FirstCity')
     secondCity = models.CharField(null=True, max_length=30, db_column='SecondCity')
     thirdCity = models.CharField(null=True, max_length=30, db_column='ThirdCity')
     appCalls = models.IntegerField(null=False, default=0, db_column='APICalls')
     lastResetDate = models.DateTimeField(null=False, auto_now=False, auto_now_add=True, db_column='LastResetDate')
+#    user = models.ForeignKey(User, on_delete=models.CASCADE)
 
-    def get_user(self):
-        return self.user
+    def get_user_id(self):
+        return self.userId
 
     def get_premium_user_id(self):
         return self.premiumUserId
@@ -133,8 +123,8 @@ class PremiumUser(models.Model):
     def get_last_reset_date(self):
         return self.lastResetDate
 
-    def get_user_name(self):
-        return self.user.userName
+#    def get_user_name(self):
+#        return self.user.userName
 
 #    def __str__(self):
 #        return "Premium User: %s" % (self.premiumUserId)
