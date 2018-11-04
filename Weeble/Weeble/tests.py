@@ -7,8 +7,8 @@ import datetime
 # models test
 class WeebleTest(TestCase):
 
-    def create_user(self, userType, userName, password, email):
-        return User.objects.create(userId=None, userType=userType, userName=userName, password=password,
+    def create_user(self, isPremium, userName, password, email):
+        return User.objects.create(userId=None, isPremium=isPremium, userName=userName, password=password,
                                      email=email, registrationDate=None, lastLoginDate=None)
 
     def create_free_user(self, user):
@@ -21,7 +21,7 @@ class WeebleTest(TestCase):
 
     def test_object_creation(self):
         # Create test user object
-        testuser1 = self.create_user(User.FREE_USER, "FirstTestUser",
+        testuser1 = self.create_user(False, "FirstTestUser",
                                      "password", "testuser1@gmail.com")
         # Verify object creation
         self.assertTrue(isinstance(testuser1, User))
@@ -33,7 +33,7 @@ class WeebleTest(TestCase):
         self.assertTrue(isinstance(freeusertest, FreeUser))
 
         # Create second test user object
-        testuser2 = self.create_user(User.PREMIUM_USER, "SecondTestUser",
+        testuser2 = self.create_user(True, "SecondTestUser",
                                      "password", "testuser2@gmail.com")
 
         # Verify object creation
@@ -47,7 +47,7 @@ class WeebleTest(TestCase):
 
     def test_object_saves(self):
         # Create test user
-        testuser1 = User(None, User.FREE_USER, "FirstTestUser", "password",
+        testuser1 = User(None, False, "FirstTestUser", "password",
                                        "testuser1@gmail.com", None, None)
         # Save test user
         testuser1.save()
@@ -61,7 +61,7 @@ class WeebleTest(TestCase):
         self.assertEqual(testuser1.get_user_id(), freeuser.get_user_id())
 
         # Create another test user
-        testuser2 = User(None, User.PREMIUM_USER, "SecondTestUser", "password",
+        testuser2 = User(None, True, "SecondTestUser", "password",
                                        "testuser2@gmail.com", datetime.datetime.now(), None)
         # Save test user
         testuser2.save()

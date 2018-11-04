@@ -15,9 +15,22 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
+from django.conf.urls import url
+from django.contrib.auth import views as auth_views
 from . import views
 
 urlpatterns = [
+    # Path for index view -- This will be the home page for users not logged in
+    path('', views.index),
+    # Path for admin page
     path('admin/', admin.site.urls),
-    path('', views.index),  # Path for index view
+    # URL for home page -- home page for logged in users
+    url(r'^home/$', views.home, name='home'),
+    # URL for login page
+    url(r'^login/$', auth_views.LoginView.as_view(template_name="..\\templates\login.html"), name="login"),
+    # URL for page when users logout
+    url(r'^logout/$',  auth_views.LogoutView.as_view(next_page="login"), name="logout"),
+    # URL for signup page
+    url(r'^signup/$', views.signup, name='signup'),
+
 ]

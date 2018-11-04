@@ -18,6 +18,14 @@
             </div>
         </div>
     </section>
+    <header>
+      {% if user.is_authenticated %}
+        <a href="{% url 'logout' %}">logout</a>
+      {% else %}
+        <a href="{% url 'login' %}">login</a> / <a href="{% url 'signup' %}">signup</a>
+      {% endif %}
+      <hr>
+    </header>
     <section class="section">
         <div class="container">
             <div class="columns">
