@@ -29,11 +29,14 @@ import pprint
 DAILY_API_CALLS_FREE_USERS = 25
 DAILY_API_CALLS_PREMIUM_USERS = 66
 
+
 @login_required(login_url='/login')
 def home(request):
-    # Pass custom ssl context so geopy will accept requests and setup geopy
+    # Pass custom ssl context so geopy will accept requests
     ctx = ssl.create_default_context(cafile=certifi.where())
     geopy.geocoders.options.default_ssl_context = ctx
+
+    # Initialize geopy
     geolocator = Nominatim(user_agent="Weeble")
 
     # Get user profile
@@ -47,10 +50,9 @@ def home(request):
         apiCalls = puser.get_app_calls() if puser.appCalls is not None else 0
         cities = []
         weather_data = []
-        idx = 0
 
         # See if the user has exceeded daily API calls
-        if apiCalls > DAILY_API_CALLS_FREE_USERS:
+        if apiCalls > DAILY_API_CALLS_PREMIUM_USERS:
             # Calculate the time between users last reset and now
             # d = (x minutes, y seconds)
             elapsed_time = datetime.datetime.now() - puser.get_last_reset_date()
@@ -65,24 +67,39 @@ def home(request):
             else:
                 return render(request, '..\\templates\errorNoAPICalls.html')
 
+        # Build list of user's cities saved in databaase
         for c in [puser.firstCity, puser.secondCity, puser.thirdCity]:
             if c is not None:
                 cities.append(c)
 
-        if request.method == 'POST':  # only true if form is submitted
-            form = CityFormPremiumUser(request.POST)  # add actual request data to form for processing
+        # True when user select 'Add City' button
+        if request.method == 'POST':
+            # Get form data
+            form = CityFormPremiumUser(request.POST)
             if form.is_valid():
-                if form.cleaned_data.get('city') is not None and form.cleaned_data.get('city') != "City Name":
-                    if idx == 0:
-                        puser.firstCity = form.cleaned_data.get('city')
-                    elif idx == 1:
-                        puser.secondCity = form.cleaned_data.get('city')
+                # New city name and number of city to replace (1, 2, or 3)
+                city = form.cleaned_data.get('city')
+                city_number = form.cleaned_data.get('city_number')
+                # Update first, second, or third city based on input
+                if city_number == 1:
+                    puser.firstCity = form.cleaned_data.get('city')
+                    cities[0] = city
+                elif city_number == 2:
+                    puser.secondCity = form.cleaned_data.get('city')
+                    if len(cities) < 2:
+                        cities.append(city)
                     else:
-                        puser.thirdCity = form.cleaned_data.get('city')
+                        cities[1] = city
+                else:
+                    puser.thirdCity = form.cleaned_data.get('city')
+                    if len(cities) < 3:
+                        cities.append(city)
+                    else:
+                        cities[2] = city
 
         form = CityFormPremiumUser()
-        idx = (idx + 1) % 3
 
+        # Iterate over the user's cities, request forecast data from DarkSky API, then display them
         if cities is not None:
             for city in cities:
                 location = geolocator.geocode(city)
@@ -93,9 +110,10 @@ def home(request):
                 weather_data.append(weather)
                 apiCalls = apiCalls + 1
 
-        context = {"weather_data": weather_data, "form": form, "cities": cities}
+        # Update number of API calls made by user, save to database
         puser.appCalls = apiCalls
         puser.save()
+        context = {"weather_data": weather_data, "form": form, "cities": cities}
         return render(request, '..\\templates\premiumuser_home.html', context)
     else:
         # Get FreeUser object corresponding to username of logged in user
@@ -126,19 +144,22 @@ def home(request):
             if c is not None:
                 cities.append(c)
 
-        if request.method == 'POST':  # only true if form is submitted
-            form = CityFormFreeUser(request.POST)  # add actual request data to form for processing
+        # True when user selects 'Add City' button
+        if request.method == 'POST':
+            form = CityFormFreeUser(request.POST)
             if form.is_valid():
-                if form.cleaned_data.get('city') is not None and form.cleaned_data.get('city') != "City Name":
-                    fuser.firstCity = form.cleaned_data.get('city')
-                    location = geolocator.geocode(fuser.firstCity)
-                    url = 'https://api.darksky.net/forecast/e49ed24b0e86f5466d6dde252a31addd/' + str(
-                        location.latitude) + ", " + str(location.longitude)
-                    darkskyjson = requests.get(url).json()
-                    weather = Parser.get_current_weather_basic(darkskyjson, fuser.firstCity)
-                    weather_data.append(weather)
-                    apiCalls = apiCalls + 1
-                    cities = []
+                # Update the user's saved city
+                fuser.firstCity = form.cleaned_data.get('city')
+                # Request forecast data for city from DarkSky API
+                location = geolocator.geocode(fuser.firstCity)
+                url = 'https://api.darksky.net/forecast/e49ed24b0e86f5466d6dde252a31addd/' + str(
+                    location.latitude) + ", " + str(location.longitude)
+                darkskyjson = requests.get(url).json()
+                # Parse DarkSky data, update number of api calls made
+                weather = Parser.get_current_weather_basic(darkskyjson, fuser.firstCity)
+                weather_data.append(weather)
+                apiCalls = apiCalls + 1
+                cities = []
 
         form = CityFormFreeUser()
 
@@ -152,9 +173,10 @@ def home(request):
                 weather_data.append(weather)
                 apiCalls = apiCalls + 1
 
-        context = {"weather_data": weather_data, "form": form, "cities": cities}
+        # Update number of api calls made by user, save free user data to database
         fuser.appCalls = apiCalls
         fuser.save()
+        context = {"weather_data": weather_data, "form": form, "cities": cities}
         return render(request, '..\\templates\\freeuser_home.html', context)
 
 

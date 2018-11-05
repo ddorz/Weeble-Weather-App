@@ -1,4 +1,4 @@
-<!-- Weeble/templates/Weeble/index.html -->
+<!-- Weeble/templates/Weeble/freeuser_home.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -31,9 +31,10 @@
             <div class="columns">
                 <div class="column is-offset-4 is-4">
                     <form method="POST">
+                        {% csrf_token %}
                         <div class="field has-addons">
                             <div class="control is-expanded">
-                                <input class="input" type="text" placeholder="City Name">
+                                {{ form.city }}
                             </div>
                             <div class="control">
                                 <button class="button is-info">
@@ -50,6 +51,7 @@
         <div class="container">
             <div class="columns">
                 <div class="column is-offset-4 is-4">
+                    {% for weather in weather_data %}
                     <div class="box">
                         <article class="media">
                             <div class="media-left">
@@ -60,7 +62,7 @@
                             <div class="media-content">
                                 <div class="content">
                                     <p>
-                                        <span class="title">{{ city }}</span>
+                                        <span class="title">{{ weather.city }}</span>
                                         <br>
                                         <span class="subtitle">{{ weather.temperature }}° F</span>
                                         <br> {{ weather.summary }}
@@ -69,6 +71,7 @@
                             </div>
                         </article>
                     </div>
+                    {% endfor %}
                 </div>
             </div>
         </div>
