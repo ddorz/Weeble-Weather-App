@@ -8,12 +8,14 @@ from django.utils.http import urlsafe_base64_encode
 from django.template.loader import render_to_string
 from django.utils.encoding import force_text
 from django.contrib.auth.models import User
+from Weeble.forms import CityFormFreeUser, CityFormPremiumUser
 from Weeble.forms import SignUpForm
 from Weeble.tokens import account_activation_token
 from Weeble.models import Profile
 from Weeble.models import FreeUser
 from Weeble.models import PremiumUser
 from Weeble.pbkdf2 import pbkdf2
+import Weeble.darkskyparser as Parser
 import datetime
 from django.contrib.auth.forms import UserCreationForm
 from geopy.geocoders import Nominatim
@@ -22,31 +24,175 @@ import ssl
 import geopy.geocoders
 import time
 import requests
+import pprint
 
+DAILY_API_CALLS_FREE_USERS = 25
+DAILY_API_CALLS_PREMIUM_USERS = 66
 
 @login_required(login_url='/login')
 def home(request):
-    return render(request, '..\\templates\home.html')
+    # Pass custom ssl context so geopy will accept requests and setup geopy
+    ctx = ssl.create_default_context(cafile=certifi.where())
+    geopy.geocoders.options.default_ssl_context = ctx
+    geolocator = Nominatim(user_agent="Weeble")
+
+    # Get user profile
+    profile = Profile.objects.get(userName=request.user.username)
+
+    # Redirect to either free user home page or premium user home paage depending on the on users account type
+    if profile.isPremium:
+        # Still neeed to fix home page for premium users. Need to add a field to premium user form where
+        # they can select which city they want to replace when adding a new city
+        puser = PremiumUser.objects.get(userName=profile.userName)
+        apiCalls = puser.get_app_calls() if puser.appCalls is not None else 0
+        cities = []
+        weather_data = []
+        idx = 0
+
+        # See if the user has exceeded daily API calls
+        if apiCalls > DAILY_API_CALLS_FREE_USERS:
+            # Calculate the time between users last reset and now
+            # d = (x minutes, y seconds)
+            elapsed_time = datetime.datetime.now() - puser.get_last_reset_date()
+            d = divmod(elapsed_time.total_seconds(), 60)
+            # Divide the number of minutes by 60 minutes/hour * 24 hours/day => d / 1440
+            # If at least 1 day (24 hours) has passed since the users last reset, reset their api calls and update db
+            # Otherwise, redirect to error page
+            if (d[0] / 1440) >= 1:
+                puser.appCalls = 0
+                puser.lastResetDate = datetime.datetime.now()
+                puser.save()
+            else:
+                return render(request, '..\\templates\errorNoAPICalls.html')
+
+        for c in [puser.firstCity, puser.secondCity, puser.thirdCity]:
+            if c is not None:
+                cities.append(c)
+
+        if request.method == 'POST':  # only true if form is submitted
+            form = CityFormPremiumUser(request.POST)  # add actual request data to form for processing
+            if form.is_valid():
+                if form.cleaned_data.get('city') is not None and form.cleaned_data.get('city') != "City Name":
+                    if idx == 0:
+                        puser.firstCity = form.cleaned_data.get('city')
+                    elif idx == 1:
+                        puser.secondCity = form.cleaned_data.get('city')
+                    else:
+                        puser.thirdCity = form.cleaned_data.get('city')
+
+        form = CityFormPremiumUser()
+        idx = (idx + 1) % 3
+
+        if cities is not None:
+            for city in cities:
+                location = geolocator.geocode(city)
+                url = 'https://api.darksky.net/forecast/e49ed24b0e86f5466d6dde252a31addd/' + str(
+                    location.latitude) + ", " + str(location.longitude)
+                darkskyjson = requests.get(url).json()
+                weather = Parser.get_current_weather_basic(darkskyjson, city)
+                weather_data.append(weather)
+                apiCalls = apiCalls + 1
+
+        context = {"weather_data": weather_data, "form": form, "cities": cities}
+        puser.appCalls = apiCalls
+        puser.save()
+        return render(request, '..\\templates\premiumuser_home.html', context)
+    else:
+        # Get FreeUser object corresponding to username of logged in user
+        fuser = FreeUser.objects.get(userName=profile.userName)
+        # Get number of API calls made by user
+        apiCalls = fuser.get_app_calls() if fuser.appCalls is not None else 0
+
+        # See if the user has exceeded daily API calls
+        if apiCalls > DAILY_API_CALLS_FREE_USERS:
+            # Calculate the time between users last reset and now
+            # d = (x minutes, y seconds)
+            elapsed_time = datetime.datetime.now() - fuser.get_last_reset_date()
+            d = divmod(elapsed_time.total_seconds(), 60)
+            # Divide the number of minutes by 60 minutes/hour * 24 hours/day => d / 1440
+            # If at least 1 day (24 hours) has passed since the users last reset, reset their api calls and update db
+            # Otherwise, redirect to error page
+            if (d[0] / 1440) >= 1:
+                fuser.appCalls = 0
+                fuser.lastResetDate = datetime.datetime.now()
+                fuser.save()
+            else:
+                return render(request, '..\\templates\errorNoAPICalls.html')
+
+        cities = []
+        weather_data = []
+
+        for c in [fuser.firstCity]:
+            if c is not None:
+                cities.append(c)
+
+        if request.method == 'POST':  # only true if form is submitted
+            form = CityFormFreeUser(request.POST)  # add actual request data to form for processing
+            if form.is_valid():
+                if form.cleaned_data.get('city') is not None and form.cleaned_data.get('city') != "City Name":
+                    fuser.firstCity = form.cleaned_data.get('city')
+                    location = geolocator.geocode(fuser.firstCity)
+                    url = 'https://api.darksky.net/forecast/e49ed24b0e86f5466d6dde252a31addd/' + str(
+                        location.latitude) + ", " + str(location.longitude)
+                    darkskyjson = requests.get(url).json()
+                    weather = Parser.get_current_weather_basic(darkskyjson, fuser.firstCity)
+                    weather_data.append(weather)
+                    apiCalls = apiCalls + 1
+                    cities = []
+
+        form = CityFormFreeUser()
+
+        if cities is not None:
+            for city in cities:
+                location = geolocator.geocode(city)
+                url = 'https://api.darksky.net/forecast/e49ed24b0e86f5466d6dde252a31addd/' + str(
+                    location.latitude) + ", " + str(location.longitude)
+                darkskyjson = requests.get(url).json()
+                weather = Parser.get_current_weather_basic(darkskyjson, city)
+                weather_data.append(weather)
+                apiCalls = apiCalls + 1
+
+        context = {"weather_data": weather_data, "form": form, "cities": cities}
+        fuser.appCalls = apiCalls
+        fuser.save()
+        return render(request, '..\\templates\\freeuser_home.html', context)
 
 
 # Returns the index.html template
+# Need to remove commented out code -- was just for testing purposes
+# Should update index.html to display login/sign up/FAQ links
 def index(request):
     # Pass custom ssl context so geopy will accept requests
-    #ctx = ssl.create_default_context(cafile=certifi.where())
+   # ctx = ssl.create_default_context(cafile=certifi.where())
     #geopy.geocoders.options.default_ssl_context = ctx
 
     # Geoencode city 'Tampa'
-    #geolocator = Nominatim(user_agent="Weeble")
+   # geolocator = Nominatim(user_agent="Weeble")
     #location = geolocator.geocode("Tampa")
 
     # Build and send DarkSky request -- Replace secret key 'e49ed24b0e86f5466d6dde252a31addd' with your DarkSky API key
-    #url = 'https://api.darksky.net/forecast/e49ed24b0e86f5466d6dde252a31addd/' + str(location.latitude) + ", " + str(location.longitude)
-    #city_weather = requests.get(url).json()
+   # url = 'https://api.darksky.net/forecast/e49ed24b0e86f5466d6dde252a31addd/' + str(location.latitude) + ", " + str(location.longitude)
+   # darkskyjson = requests.get(url).json()
+
+   # weather = Parser.get_current_weather_basic(darkskyjson)
+    weather = []
+    context = {"weather": weather,
+               "city": "Tampa"}
+
+    #pp = pprint.PrettyPrinter(indent=4)
+
+    #pp.pprint(city_weather)
+    #print("\n")
+    #print(Parser.get_current_weather_basic(city_weather))
+    #print("\n")
+    #print(Parser.get_day_weather_basic(city_weather))
+    #print("\n")
+    #print(Parser.get_week_weather_basic(city_weather))
 
     # Print weather data
     #print(city_weather)
 
-    return render(request, '..\\templates\weeble\index.html')
+    return render(request, '..\\templates\weeble\index.html', context)
 
 
 def signup(request):
@@ -58,7 +204,7 @@ def signup(request):
             # user.is_active = False
             user.save()
 
-            user.profile.isPremium = form.cleaned_data.get('isPremium')
+            user.profile.isPremium = True if form.cleaned_data.get('isPremium') else False
             user.profile.userName = form.cleaned_data.get('username')
             user.profile.password = pbkdf2(form.cleaned_data.get('password1'), 'salt')
             user.profile.email = form.cleaned_data.get('email')

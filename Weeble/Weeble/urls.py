@@ -26,6 +26,10 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     # URL for home page -- home page for logged in users
     url(r'^home/$', views.home, name='home'),
+    # URL for free users home page
+    url(r'^homef/$', views.home, name='freeuser_home'),
+    # URL for premium users home page
+    url(r'^homep/$', views.home, name='premiumuser_home'),
     # URL for login page
     url(r'^login/$', auth_views.LoginView.as_view(template_name="..\\templates\login.html"), name="login"),
     # URL for page when users logout
@@ -37,5 +41,7 @@ urlpatterns = [
     # Account activation / email confrimation URL
     url(r'^activate/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z]{1,13}-[0-9A-Za-z]{1,20})/$',
         views.activate, name='activate'),
+    # URL for error page when user has no API calls left
+    url(r'^APIerror/$', views.home, name='errorNoAPICalls'),
 
 ]

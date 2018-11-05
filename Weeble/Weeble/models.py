@@ -23,7 +23,7 @@ class Profile(models.Model):
     email = models.CharField(null=False, blank=False, unique=True, max_length=128, db_column='Email')
     registrationDate = models.DateField(null=False, auto_now=False, auto_now_add=True, db_column='RegistrationDate')
     lastLoginDate = models.DateField(null=True, auto_now=False, auto_now_add=False, db_column='LastLoginDate')
-    isPremium = models.BooleanField(null=False, db_column='isPremium')
+    isPremium = models.BooleanField(default=False, db_column='isPremium')
     emailConfirmed = models.BooleanField(null=False, default=False)
 
     def get_user_id(self):
