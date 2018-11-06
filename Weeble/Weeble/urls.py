@@ -47,6 +47,8 @@ urlpatterns = [
     url(r'^fweeklyweather/$', views.weekly_weather, name='freeuser_weekly_weather'),
     # URL for free user daily forecast page
     url(r'^fdailyweather/$', views.daily_weather, name='freeuser_daily_weather'),
+    #URL for faq
+    path('faq/', faqView),
 
 
 ]

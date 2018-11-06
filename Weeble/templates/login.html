@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 
 {% block content %}
-  <h2>Log in to Weeble</h2>
+  <h2>Log in to Webble</h2>
   {% if form.errors %}
     <p style="color: red">Your username and password didn't match. Please try again.</p>
   {% endif %}
@@ -21,6 +21,6 @@
       </p>
     {% endfor %}
     <button type="submit">Log in</button>
-    <a href="{% url 'signup' %}">New to Weeble? Sign up</a>
+    <a href="{% url 'signup' %}">New to Webble? Sign up</a>
   </form>
 {% endblock %}
