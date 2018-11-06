@@ -43,5 +43,10 @@ urlpatterns = [
         views.activate, name='activate'),
     # URL for error page when user has no API calls left
     url(r'^APIerror/$', views.home, name='errorNoAPICalls'),
+    # URL for free user weekly forecast page
+    url(r'^fweeklyweather/$', views.weekly_weather, name='freeuser_weekly_weather'),
+    # URL for free user daily forecast page
+    url(r'^fdailyweather/$', views.daily_weather, name='freeuser_daily_weather'),
+
 
 ]

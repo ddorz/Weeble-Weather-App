@@ -44,8 +44,6 @@ def home(request):
 
     # Redirect to either free user home page or premium user home paage depending on the on users account type
     if profile.isPremium:
-        # Still neeed to fix home page for premium users. Need to add a field to premium user form where
-        # they can select which city they want to replace when adding a new city
         puser = PremiumUser.objects.get(userName=profile.userName)
         apiCalls = puser.get_app_calls() if puser.appCalls is not None else 0
         cities = []
@@ -178,6 +176,121 @@ def home(request):
         fuser.save()
         context = {"weather_data": weather_data, "form": form, "cities": cities}
         return render(request, '..\\templates\\freeuser_home.html', context)
+
+
+@login_required(login_url='/login')
+def weekly_weather(request):
+    # Pass custom ssl context so geopy will accept requests
+    ctx = ssl.create_default_context(cafile=certifi.where())
+    geopy.geocoders.options.default_ssl_context = ctx
+
+    # Initialize geopy
+    geolocator = Nominatim(user_agent="Weeble")
+
+    # Get user profile
+    profile = Profile.objects.get(userName=request.user.username)
+
+    # Redirect to either free user home page or premium user home paage depending on the on users account type
+    if profile.isPremium:
+        return render(request, '..\\templates\errorNoAPICalls.html')
+    else:
+        # Get FreeUser object corresponding to username of logged in user
+        fuser = FreeUser.objects.get(userName=profile.userName)
+        # Get number of API calls made by user
+        apiCalls = fuser.get_app_calls() if fuser.appCalls is not None else 0
+
+        # See if the user has exceeded daily API calls
+        if apiCalls > DAILY_API_CALLS_FREE_USERS:
+            # Calculate the time between users last reset and now
+            # d = (x minutes, y seconds)
+            elapsed_time = datetime.datetime.now() - fuser.get_last_reset_date()
+            d = divmod(elapsed_time.total_seconds(), 60)
+            # Divide the number of minutes by 60 minutes/hour * 24 hours/day => d / 1440
+            # If at least 1 day (24 hours) has passed since the users last reset, reset their api calls and update db
+            # Otherwise, redirect to error page
+            if (d[0] / 1440) >= 1:
+                fuser.appCalls = 0
+                fuser.lastResetDate = datetime.datetime.now()
+                fuser.save()
+            else:
+                return render(request, '..\\templates\errorNoAPICalls.html')
+
+        weather_data = []
+        daily_data = []
+
+        if fuser.firstCity is not None:
+            location = geolocator.geocode(fuser.firstCity)
+            url = 'https://api.darksky.net/forecast/e49ed24b0e86f5466d6dde252a31addd/' + str(
+                location.latitude) + ", " + str(location.longitude)
+            darkskyjson = requests.get(url).json()
+            # Parse DarkSky data, update number of api calls made
+            weather_data = Parser.get_week_weather_basic(darkskyjson, fuser.firstCity)
+            daily_data = weather_data["days"]
+            apiCalls = apiCalls + 1
+
+        # Update number of api calls made by user, save free user data to database
+        fuser.appCalls = apiCalls
+        fuser.save()
+        context = {"weather_data": weather_data, "daily_data": daily_data}
+        return render(request, '..\\templates\\freeuser_weekly_weather.html', context)
+
+
+@login_required(login_url='/login')
+def daily_weather(request):
+    # Pass custom ssl context so geopy will accept requests
+    ctx = ssl.create_default_context(cafile=certifi.where())
+    geopy.geocoders.options.default_ssl_context = ctx
+
+    # Initialize geopy
+    geolocator = Nominatim(user_agent="Weeble")
+
+    # Get user profile
+    profile = Profile.objects.get(userName=request.user.username)
+
+    # Redirect to either free user home page or premium user home paage depending on the on users account type
+    if profile.isPremium:
+        return render(request, '..\\templates\errorNoAPICalls.html')
+    else:
+        # Get FreeUser object corresponding to username of logged in user
+        fuser = FreeUser.objects.get(userName=profile.userName)
+        # Get number of API calls made by user
+        apiCalls = fuser.get_app_calls() if fuser.appCalls is not None else 0
+
+        # See if the user has exceeded daily API calls
+        if apiCalls > DAILY_API_CALLS_FREE_USERS:
+            # Calculate the time between users last reset and now
+            # d = (x minutes, y seconds)
+            elapsed_time = datetime.datetime.now() - fuser.get_last_reset_date()
+            d = divmod(elapsed_time.total_seconds(), 60)
+            # Divide the number of minutes by 60 minutes/hour * 24 hours/day => d / 1440
+            # If at least 1 day (24 hours) has passed since the users last reset, reset their api calls and update db
+            # Otherwise, redirect to error page
+            if (d[0] / 1440) >= 1:
+                fuser.appCalls = 0
+                fuser.lastResetDate = datetime.datetime.now()
+                fuser.save()
+            else:
+                return render(request, '..\\templates\errorNoAPICalls.html')
+
+        weather_data = []
+        daily_data = []
+
+        if fuser.firstCity is not None:
+            location = geolocator.geocode(fuser.firstCity)
+            url = 'https://api.darksky.net/forecast/e49ed24b0e86f5466d6dde252a31addd/' + str(
+                location.latitude) + ", " + str(location.longitude)
+            darkskyjson = requests.get(url).json()
+            # Parse DarkSky data, update number of api calls made
+            weather_data = Parser.get_day_weather_basic(darkskyjson, fuser.firstCity)
+            daily_data = weather_data["hours"]
+            apiCalls = apiCalls + 1
+            print(daily_data)
+
+        # Update number of api calls made by user, save free user data to database
+        fuser.appCalls = apiCalls
+        fuser.save()
+        context = {"weather_data": weather_data, "daily_data": daily_data}
+        return render(request, '..\\templates\\freeuser_daily_weather.html', context)
 
 
 # Returns the index.html template
