@@ -81,7 +81,10 @@ def home(request):
                 # Update first, second, or third city based on input
                 if city_number == 1:
                     puser.firstCity = form.cleaned_data.get('city')
-                    cities[0] = city
+                    if len(cities) < 1:
+                        cities.append(city)
+                    else:
+                        cities[0] = city
                 elif city_number == 2:
                     puser.secondCity = form.cleaned_data.get('city')
                     if len(cities) < 2:
@@ -96,6 +99,7 @@ def home(request):
                         cities[2] = city
 
         form = CityFormPremiumUser()
+        columnoffset = 0
 
         # Iterate over the user's cities, request forecast data from DarkSky API, then display them
         if cities is not None:
@@ -106,6 +110,7 @@ def home(request):
                 darkskyjson = requests.get(url).json()
                 weather = Parser.get_current_weather_basic(darkskyjson, city)
                 weather_data.append(weather)
+                columnoffset = columnoffset + 4
                 apiCalls = apiCalls + 1
 
         # Update number of API calls made by user, save to database
@@ -225,13 +230,12 @@ def weekly_weather(request):
             darkskyjson = requests.get(url).json()
             # Parse DarkSky data, update number of api calls made
             weather_data = Parser.get_week_weather_basic(darkskyjson, fuser.firstCity)
-            daily_data = weather_data["days"]
             apiCalls = apiCalls + 1
 
         # Update number of api calls made by user, save free user data to database
         fuser.appCalls = apiCalls
         fuser.save()
-        context = {"weather_data": weather_data, "daily_data": daily_data}
+        context = {"weather_data": weather_data}
         return render(request, '..\\templates\\freeuser_weekly_weather.html', context)
 
 
@@ -249,7 +253,49 @@ def daily_weather(request):
 
     # Redirect to either free user home page or premium user home paage depending on the on users account type
     if profile.isPremium:
-        return render(request, '..\\templates\errorNoAPICalls.html')
+        puser = PremiumUser.objects.get(userName=profile.userName)
+        apiCalls = puser.get_app_calls() if puser.appCalls is not None else 0
+        cities = []
+        weather_data_list = []
+
+        # See if the user has exceeded daily API calls
+        if apiCalls > DAILY_API_CALLS_PREMIUM_USERS:
+            # Calculate the time between users last reset and now
+            # d = (x minutes, y seconds)
+            elapsed_time = datetime.datetime.now() - puser.get_last_reset_date()
+            d = divmod(elapsed_time.total_seconds(), 60)
+            # Divide the number of minutes by 60 minutes/hour * 24 hours/day => d / 1440
+            # If at least 1 day (24 hours) has passed since the users last reset, reset their api calls and update db
+            # Otherwise, redirect to error page
+            if (d[0] / 1440) >= 1:
+                puser.appCalls = 0
+                puser.lastResetDate = datetime.datetime.now()
+                puser.save()
+            else:
+                return render(request, '..\\templates\errorNoAPICalls.html')
+
+        # Build list of user's cities saved in databaase
+        for c in [puser.firstCity, puser.secondCity, puser.thirdCity]:
+            if c is not None:
+                cities.append(c)
+
+        # Iterate over the user's cities, request forecast data from DarkSky API, then display them
+        if cities is not None:
+            for city in cities:
+                location = geolocator.geocode(city)
+                url = 'https://api.darksky.net/forecast/e49ed24b0e86f5466d6dde252a31addd/' + str(
+                    location.latitude) + ", " + str(location.longitude)
+                darkskyjson = requests.get(url).json()
+                weather = Parser.get_day_weather_basic(darkskyjson, city)
+                weather_data_list.append(weather)
+                apiCalls = apiCalls + 1
+
+        # Update number of API calls made by user, save to database
+        puser.appCalls = apiCalls
+        puser.save()
+        count = []
+        context = {"weather_data_list": weather_data_list}
+        return render(request, '..\\templates\premiumuser_daily_weather.html', context, count)
     else:
         # Get FreeUser object corresponding to username of logged in user
         fuser = FreeUser.objects.get(userName=profile.userName)
@@ -282,14 +328,12 @@ def daily_weather(request):
             darkskyjson = requests.get(url).json()
             # Parse DarkSky data, update number of api calls made
             weather_data = Parser.get_day_weather_basic(darkskyjson, fuser.firstCity)
-            daily_data = weather_data["hours"]
             apiCalls = apiCalls + 1
-            print(daily_data)
 
         # Update number of api calls made by user, save free user data to database
         fuser.appCalls = apiCalls
         fuser.save()
-        context = {"weather_data": weather_data, "daily_data": daily_data}
+        context = {"weather_data": weather_data}
         return render(request, '..\\templates\\freeuser_daily_weather.html', context)
 
 

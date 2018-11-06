@@ -47,6 +47,10 @@ urlpatterns = [
     url(r'^fweeklyweather/$', views.weekly_weather, name='freeuser_weekly_weather'),
     # URL for free user daily forecast page
     url(r'^fdailyweather/$', views.daily_weather, name='freeuser_daily_weather'),
+    # URL for premium user weekly forecast page
+    url(r'^pweeklyweather/$', views.weekly_weather, name='premiumuser_weekly_weather'),
+    # URL for premium user daily forecast page
+    url(r'^pdailyweather/$', views.daily_weather, name='premiumuser_daily_weather'),
 
 
 ]
