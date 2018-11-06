@@ -1,5 +1,5 @@
 from django.test import TestCase
-from Weeble.models import User
+from Weeble.models import Profile
 from Weeble.models import FreeUser
 from Weeble.models import PremiumUser
 import datetime
@@ -8,8 +8,8 @@ import datetime
 class WeebleTest(TestCase):
 
     def create_user(self, isPremium, userName, password, email):
-        return User.objects.create(userId=None, isPremium=isPremium, userName=userName, password=password,
-                                     email=email, registrationDate=None, lastLoginDate=None)
+        return Profile.objects.create(userId=None, isPremium=isPremium, userName=userName, password=password,
+                                      email=email, registrationDate=None, lastLoginDate=None, emailConfirmed=False)
 
     def create_free_user(self, user):
         return FreeUser.objects.create(userId=user.get_user_id(), freeUserId=None, firstCity=None,
@@ -24,7 +24,7 @@ class WeebleTest(TestCase):
         testuser1 = self.create_user(False, "FirstTestUser",
                                      "password", "testuser1@gmail.com")
         # Verify object creation
-        self.assertTrue(isinstance(testuser1, User))
+        self.assertTrue(isinstance(testuser1, Profile))
 
         # Create free user object
         freeusertest = self.create_free_user(testuser1)
@@ -37,7 +37,7 @@ class WeebleTest(TestCase):
                                      "password", "testuser2@gmail.com")
 
         # Verify object creation
-        self.assertTrue(isinstance(testuser2, User))
+        self.assertTrue(isinstance(testuser2, Profile))
 
         # Create premium user object
         premiumusertest = self.create_premium_user(testuser2)
@@ -47,7 +47,7 @@ class WeebleTest(TestCase):
 
     def test_object_saves(self):
         # Create test user
-        testuser1 = User(None, False, "FirstTestUser", "password",
+        testuser1 = Profile(None, False, "FirstTestUser", "password",
                                        "testuser1@gmail.com", None, None)
         # Save test user
         testuser1.save()
@@ -61,7 +61,7 @@ class WeebleTest(TestCase):
         self.assertEqual(testuser1.get_user_id(), freeuser.get_user_id())
 
         # Create another test user
-        testuser2 = User(None, True, "SecondTestUser", "password",
+        testuser2 = Profile(None, True, "SecondTestUser", "password",
                                        "testuser2@gmail.com", datetime.datetime.now(), None)
         # Save test user
         testuser2.save()
