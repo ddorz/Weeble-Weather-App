@@ -456,3 +456,6 @@ def activate(request, uidb64, token):
         return redirect('home')
     else:
         return render(request, '..\\templates\\account_activation_invalid_link.html')
+
+def faqView(request):
+    return render(request, 'weeble/faq.html')
