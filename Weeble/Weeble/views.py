@@ -16,19 +16,19 @@ from Weeble.models import FreeUser
 from Weeble.models import PremiumUser
 from Weeble.pbkdf2 import pbkdf2
 import Weeble.darkskyparser as Parser
-import datetime
-from django.contrib.auth.forms import UserCreationForm
 from geopy.geocoders import Nominatim
+import datetime
 import certifi
 import ssl
 import geopy.geocoders
-import time
 import requests
-import pprint
 
 DAILY_API_CALLS_FREE_USERS = 25
 DAILY_API_CALLS_PREMIUM_USERS = 66
-
+# TODO - Values increased for debugging -- set to correct values before release
+MAX_USERS = 2000
+MAX_FREE_USERS = 1000
+MAX_PREMIUM_USERS = 1000
 
 # Checks whether a user has API calls remaining or not. If the user is out of API calls, checks if its been 24 hrs since
 # their last reset date. If 24 hrs or more has passed, API calls set to 0 and reset date updated in database.
@@ -73,6 +73,12 @@ def darksky_request_by_city(geolocator, city):
         location.latitude) + ", " + str(location.longitude)).json()
 
 
+def load_city_numbers(request):
+    city_numbers = []
+    for i in range(0, PremiumUser.MAX_NUMBER_OF_CITIES):
+        city_numbers.append(i + 1)
+    return render(request, '..\\templates\city_number_dropdown_list.html', {'city_numbers': city_numbers})
+
 @login_required(login_url='/login')
 def home(request):
     # Initialize geolocator for encoding cities to coordinates
@@ -84,6 +90,7 @@ def home(request):
     # Redirect to either free user home page or premium user home paage depending on the on users account type
     if profile.isPremium:
         puser = PremiumUser.objects.get(userName=profile.userName)
+        api_calls = 0 if puser.apiCalls is None else puser.apiCalls
         cities = puser.get_saved_cities()
         weather_data = []
 
@@ -101,31 +108,37 @@ def home(request):
             if form.is_valid():
                 city = form.cleaned_data.get('city')
                 city_number = form.cleaned_data.get('city_number')
-                for i in puser.NUMBER_OF_CITIES:
-                    if city_number == i+1:
+                valid_city_number = False
+                for i in range(0, puser.MAX_NUMBER_OF_CITIES):
+                    if city_number == i + 1:
+                        valid_city_number = True
                         if len(cities) < city_number:
                             cities.append(city)
                         else:
                             cities[i] = city
-                        puser.set_saved_cities(cities)
+                if valid_city_number:
+                    puser.set_saved_cities(cities)
 
         form = CityFormPremiumUser()
 
         # Iterate over the user's cities, request forecast data from DarkSky API, then display data
         if cities is not None:
+            user_needs_update = True
             for city in cities:
                 darkskyjson = darksky_request_by_city(geolocator, city)
                 weather = Parser.get_current_weather_basic(darkskyjson, city)
                 weather_data.append(weather)
-                puser.increment_api_calls()
+                api_calls = api_calls + 1
 
         # Save updated user object
+        puser.apiCalls = api_calls
         puser.save()
         context = {"weather_data": weather_data, "form": form, "cities": cities}
         return render(request, '..\\templates\premiumuser_home.html', context)
     else:
         # Get FreeUser object corresponding to username of logged in user
         fuser = FreeUser.objects.get(userName=profile.userName)
+        api_calls = 0 if fuser.apiCalls is None else fuser.apiCalls
         cities = [fuser.firstCity] if fuser.firstCity is not None else []
         weather_data = []
 
@@ -144,7 +157,7 @@ def home(request):
                 # Parse DarkSky data, update number of api calls made
                 weather = Parser.get_current_weather_basic(darkskyjson, fuser.get_first_city())
                 weather_data.append(weather)
-                fuser.increment_api_calls()
+                api_calls = api_calls + 1
                 cities = []
 
         form = CityFormFreeUser()
@@ -154,9 +167,10 @@ def home(request):
                 darkskyjson = darksky_request_by_city(geolocator, city)
                 weather = Parser.get_current_weather_basic(darkskyjson, city)
                 weather_data.append(weather)
-                fuser.increment_api_calls()
+                api_calls + api_calls + 1
 
         # Save updated user object to database
+        fuser.apiCalls = api_calls
         fuser.save()
         context = {"weather_data": weather_data, "form": form, "cities": cities}
         return render(request, '..\\templates\\freeuser_home.html', context)
@@ -172,6 +186,7 @@ def weekly_weather(request):
     # Redirect to either free user home page or premium user home paage depending on the on users account type
     if profile.isPremium:
         puser = PremiumUser.objects.get(userName=profile.userName)
+        api_calls = 0 if puser.apiCalls is None else puser.apiCalls
         cities = puser.get_saved_cities()
         weather_data_list = []
 
@@ -185,15 +200,17 @@ def weekly_weather(request):
                 darkskyjson = darksky_request_by_city(geolocator, city)
                 weather = Parser.get_week_weather_basic(darkskyjson, city)
                 weather_data_list.append(weather)
-                puser.increment_api_calls()
+                api_calls = api_calls + 1
 
         # Save updated user object
+        puser.apiCalls = api_calls
         puser.save()
         context = {"weather_data_list": weather_data_list}
         return render(request, '..\\templates\premiumuser_weekly_weather.html', context)
     else:
         # Get FreeUser object corresponding to username of lssogged in user
         fuser = FreeUser.objects.get(userName=profile.userName)
+        api_calls = 0 if fuser.apiCalls is None else fuser.apiCalls
         weather_data = []
 
         # See if the user has exceeded daily API calls
@@ -203,9 +220,10 @@ def weekly_weather(request):
         if fuser.firstCity is not None:
             darkskyjson = darksky_request_by_city(geolocator, fuser.get_first_city())
             weather_data = Parser.get_week_weather_basic(darkskyjson, fuser.get_first_city())
-            fuser.increment_api_calls()
+            api_calls = api_calls + 1
 
         # Save updated user object to database
+        fuser.apiCalls = api_calls
         fuser.save()
         context = {"weather_data": weather_data}
         return render(request, '..\\templates\\freeuser_weekly_weather.html', context)
@@ -221,6 +239,7 @@ def daily_weather(request):
     # Redirect to either free user home page or premium user home paage depending on the on users account type
     if profile.isPremium:
         puser = PremiumUser.objects.get(userName=profile.userName)
+        api_calls = 0 if puser.apiCalls is None else puser.apiCalls
         cities = puser.get_saved_cities()
         weather_data_list = []
 
@@ -234,15 +253,17 @@ def daily_weather(request):
                 darkskyjson = darksky_request_by_city(geolocator, city)
                 weather = Parser.get_day_weather_basic(darkskyjson, city)
                 weather_data_list.append(weather)
-                puser.increment_api_calls()
+                api_calls = api_calls + 1
 
         # Save updated user object
+        puser.apiCalls = api_calls
         puser.save()
         context = {"weather_data_list": weather_data_list}
         return render(request, '..\\templates\premiumuser_daily_weather.html', context)
     else:
         # Get FreeUser object corresponding to username of logged in user
         fuser = FreeUser.objects.get(userName=profile.userName)
+        api_calls = 0 if fuser.apiCalls is None else fuser.apiCalls
         weather_data = []
 
         # See if the user has exceeded daily API calls
@@ -252,55 +273,38 @@ def daily_weather(request):
         if fuser.firstCity is not None:
             darkskyjson = darksky_request_by_city(geolocator, fuser.get_first_city())
             weather_data = Parser.get_day_weather_basic(darkskyjson, fuser.get_first_city())
-            fuser.increment_api_calls()
+            api_calls = api_calls + 1
 
         # Save updated user object to database
+        fuser.apiCalls = api_calls
         fuser.save()
         context = {"weather_data": weather_data}
         return render(request, '..\\templates\\freeuser_daily_weather.html', context)
 
 
-# Returns the index.html template
-# Need to remove commented out code -- was just for testing purposes
-# Should update index.html to display login/sign up/FAQ links
+# TODO - Add home page -- currently redirects to login page
 def index(request):
-    # Pass custom ssl context so geopy will accept requests
-   # ctx = ssl.create_default_context(cafile=certifi.where())
-    #geopy.geocoders.options.default_ssl_context = ctx
-
-    # Geoencode city 'Tampa'
-   # geolocator = Nominatim(user_agent="Weeble")
-    #location = geolocator.geocode("Tampa")
-
-    # Build and send DarkSky request -- Replace secret key 'e49ed24b0e86f5466d6dde252a31addd' with your DarkSky API key
-   # url = 'https://api.darksky.net/forecast/e49ed24b0e86f5466d6dde252a31addd/' + str(location.latitude) + ", " + str(location.longitude)
-   # darkskyjson = requests.get(url).json()
-
-   # weather = Parser.get_current_weather_basic(darkskyjson)
-    weather = []
-    context = {"weather": weather,
-               "city": "Tampa"}
-
-    #pp = pprint.PrettyPrinter(indent=4)
-
-    #pp.pprint(city_weather)
-    #print("\n")
-    #print(Parser.get_current_weather_basic(city_weather))
-    #print("\n")
-    #print(Parser.get_day_weather_basic(city_weather))
-    #print("\n")
-    #print(Parser.get_week_weather_basic(city_weather))
-
-    # Print weather data
-    #print(city_weather)
-
-    return render(request, '..\\templates\weeble\index.html', context)
+    return redirect('login')
 
 
 def signup(request):
     if request.method == 'POST':
         form = SignUpForm(request.POST)
         if form.is_valid():
+            # Verify new users are being accepted. If at capacity and no new accounts can be registered, redirect user
+            # to an error page. If there is room for new accounts but not of the type they selected, add error msg to
+            # the form and display it on the page so user can sign up as different account type
+            # TODO - Add input validation for email (verify valid email and verify not email not already registered)
+            profile_list = Profile.objects.all()
+            if len(profile_list) >= MAX_USERS:
+                return render(request, '..\\templates\errorMaxAccounts.html')
+            elif form.cleaned_data.get('isPremium') and len(PremiumUser.objects.all()) >= MAX_PREMIUM_USERS:
+                form.add_error('isPremium', 'Sorry, we\'re currently not accepting new Premium Users')
+                return render(request, '..\\templates\signup.html', {'form': form})
+            elif not form.cleaned_data.get('isPremium') and len(FreeUser.objects.all()) >= MAX_FREE_USERS:
+                form.add_error('isPremium', 'Sorry, we\'re currently not accepting new Free Users')
+                return render(request, '..\\templates\signup.html', {'form': form})
+
             user = form.save(commit=False)
             # Accounts active without confrimation until emails are sending
             # user.is_active = False
@@ -334,6 +338,8 @@ def signup(request):
                                                          firstCity=None,
                                                          secondCity=None,
                                                          thirdCity=None,
+                                                         fourthCity=None,
+                                                         fifthCity=None,
                                                          apiCalls=0,
                                                          lastResetDate=None)
                 premiumuser.save()
@@ -380,5 +386,6 @@ def activate(request, uidb64, token):
     else:
         return render(request, '..\\templates\\account_activation_invalid_link.html')
 
+
 def faqView(request):
-    return render(request, 'weeble/faq.html')
+    return render(request, '..\\templates\weeble\\faq.html')

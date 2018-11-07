@@ -4,6 +4,8 @@ from django.contrib.auth.models import User
 from Weeble.models import FreeUser
 from Weeble.models import PremiumUser
 from django.forms import ModelForm, TextInput, NumberInput
+from Weeble.models import PremiumUser
+
 
 # Form for user sign up
 class SignUpForm(UserCreationForm):
@@ -15,11 +17,15 @@ class SignUpForm(UserCreationForm):
         model = User
         fields = ('username', 'isPremium', 'email', 'password1', )
 
+
 # Form for free user home page
 class CityFormFreeUser(forms.Form):
     city = forms.CharField(label='City Name', required=True, widget=TextInput(attrs={'class': 'input', 'placeholder': 'City Name'}))
 
+
 # Form for premium user home page
 class CityFormPremiumUser(forms.Form):
     city = forms.CharField(label='City Name', widget=TextInput(attrs={'class': 'input', 'placeholder': 'City Name'}))
-    city_number = forms.IntegerField(label='City Number', required=True, widget=TextInput(attrs={'class': 'input', 'placeholder': 'City Number'}))
+    city_number = forms.IntegerField(label='City Number', required=True,
+                                     widget=NumberInput(attrs={'min': 1, 'max': PremiumUser.MAX_NUMBER_OF_CITIES,
+                                                               'class': 'input', 'placeholder': 1}))

@@ -43,6 +43,8 @@ urlpatterns = [
         views.activate, name='activate'),
     # URL for error page when user has no API calls left
     url(r'^APIerror/$', views.home, name='errorNoAPICalls'),
+    # URL for error page when no new user accounts can be registered
+    url(r'^registrationerror/$', views.home, name='registration_error'),
     # URL for free user weekly forecast page
     url(r'^fweeklyweather/$', views.weekly_weather, name='freeuser_weekly_weather'),
     # URL for free user daily forecast page
@@ -53,6 +55,8 @@ urlpatterns = [
     url(r'^pdailyweather/$', views.daily_weather, name='premiumuser_daily_weather'),
     #URL for faq
     path('faq/', views.faqView),
+    # Path for loading city numbers for dropdown menu on premium user home page
+    path('load_city_numbers/', views.load_city_numbers, name='load_city_numbers'),
 
 
 ]

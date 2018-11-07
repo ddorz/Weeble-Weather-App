@@ -83,7 +83,7 @@ class FreeUser(models.Model):
         return self.firstCity
 
     def get_api_calls(self):
-        return self.apiCalls
+        return 1 if self.apiCalls is None else self.apiCalls
 
     def get_last_reset_date(self):
         return self.lastResetDate
@@ -106,12 +106,14 @@ class PremiumUser(models.Model):
     class Meta:
         db_table = 'premiumusers'
 
-    NUMBER_OF_CITIES = 3
+    MAX_NUMBER_OF_CITIES = 5
     userName = models.CharField(null=False, blank=False, unique=True, max_length=30, db_column='UserName')
     premiumUserId = models.AutoField(null=False, unique=True, primary_key=True, db_column='PremiumUserID')
     firstCity = models.CharField(null=True, max_length=30, db_column='FirstCity')
     secondCity = models.CharField(null=True, max_length=30, db_column='SecondCity')
     thirdCity = models.CharField(null=True, max_length=30, db_column='ThirdCity')
+    fourthCity = models.CharField(null=True, max_length=30, db_column='FourthCity')
+    fifthCity = models.CharField(null=True, max_length=30, db_column='fifthCity')
     apiCalls = models.IntegerField(null=False, default=0, db_column='APICalls')
     lastResetDate = models.DateTimeField(null=False, auto_now=False, auto_now_add=True, db_column='LastResetDate')
 
@@ -131,20 +133,20 @@ class PremiumUser(models.Model):
         return self.thirdCity
 
     def get_api_calls(self):
-        return self.apiCalls
+        return 1 if self.apiCalls is None else self.apiCalls
 
     def get_last_reset_date(self):
         return self.lastResetDate
 
     def get_saved_cities(self):
         cities = []
-        for city in [self.firstCity, self.secondCity, self.thirdCity]:
+        for city in [self.firstCity, self.secondCity, self.thirdCity, self.fourthCity, self.fifthCity]:
             if city is not None:
                 cities.append(city)
         return cities
 
     def increment_api_calls(self):
-        self.apiCalls = self.apiCalls + 1
+        self.apCalls = self.apiCalls + 1
 
     def set_api_calls(self, api_calls):
         self.apiCalls = api_calls
@@ -156,10 +158,12 @@ class PremiumUser(models.Model):
         self.firstCity = cities[0] if len(cities) > 0 and cities[0] is not None else self.firstCity
         self.secondCity = cities[1] if len(cities) > 1 and cities[1] is not None else self.secondCity
         self.thirdCity = cities[2] if len(cities) > 2 and cities[2] is not None else self.thirdCity
+        self.fourthCity = cities[3] if len(cities) > 3 and cities[1] is not None else self.fourthCity
+        self.fifthCity = cities[4] if len(cities) > 4 and cities[2] is not None else self.fifthCity
 
     def get_number_of_saved_cities(self):
         saved_city_count = 0
-        for city in [self.firstCity, self.secondCity, self.thirdCity]:
+        for city in self.get_saved_cities():
             if city is not None:
                 saved_city_count = saved_city_count + 1
         return saved_city_count
