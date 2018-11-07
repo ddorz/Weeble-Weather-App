@@ -30,7 +30,7 @@
         <div class="container">
             <div class="columns">
                 <div class="column is-offset-4 is-4">
-                    <form method="POST">
+                    <form method="POST" id="premiumUserAddCity" data-city-numbers-url="{% url 'load_city_numbers' %}" novalidate>
                         {% csrf_token %}
                         <div class="field has-addons">
                             <div class="control is-expanded">
