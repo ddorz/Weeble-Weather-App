@@ -39,6 +39,8 @@ Creating Weeble Database on localhost
 	FirstCity VARCHAR(30),
 	SecondCity VARCHAR(30),
 	ThirdCity VARCHAR(30),
+	FourthCity VARCHAR(30),
+	FifthCity VARCHAR(30),
 	APICalls INT NOT NULL,
 	LastResetDate DATETIME NOT NULL
 );
