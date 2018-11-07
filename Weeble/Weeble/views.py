@@ -171,9 +171,28 @@ def weekly_weather(request):
 
     # Redirect to either free user home page or premium user home paage depending on the on users account type
     if profile.isPremium:
-        return render(request, '..\\templates\errorNoAPICalls.html')
+        puser = PremiumUser.objects.get(userName=profile.userName)
+        cities = puser.get_saved_cities()
+        weather_data_list = []
+
+        # See if the user has exceeded daily API calls
+        if check_user_api_calls(puser, DAILY_API_CALLS_PREMIUM_USERS - puser.get_number_of_saved_cities() + 1):
+            return render(request, '..\\templates\errorNoAPICalls.html')
+
+        # Iterate over the user's cities, request forecast data from DarkSky API, then display them
+        if cities is not None:
+            for city in cities:
+                darkskyjson = darksky_request_by_city(geolocator, city)
+                weather = Parser.get_week_weather_basic(darkskyjson, city)
+                weather_data_list.append(weather)
+                puser.increment_api_calls()
+
+        # Save updated user object
+        puser.save()
+        context = {"weather_data_list": weather_data_list}
+        return render(request, '..\\templates\premiumuser_weekly_weather.html', context)
     else:
-        # Get FreeUser object corresponding to username of logged in user
+        # Get FreeUser object corresponding to username of lssogged in user
         fuser = FreeUser.objects.get(userName=profile.userName)
         weather_data = []
 
