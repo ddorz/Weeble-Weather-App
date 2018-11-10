@@ -76,8 +76,7 @@ WSGI_APPLICATION = 'Weeble.wsgi.application'
 
 DATABASES = {
     'default': {
-#        'ENGINE': 'django.db.backends.mysql',
-        'ENGINER': 'mysql.connector.django',
+        'ENGINER': 'test',
         'NAME': 'weeble',
         'USER': 'root',
         'PASSWORD': 'toor',
