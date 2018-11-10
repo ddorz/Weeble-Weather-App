@@ -30,28 +30,13 @@ MAX_USERS = 2000
 MAX_FREE_USERS = 1000
 MAX_PREMIUM_USERS = 1000
 
-# Checks whether a user has API calls remaining or not. If the user is out of API calls, checks if its been 24 hrs since
-# their last reset date. If 24 hrs or more has passed, API calls set to 0 and reset date updated in database.
-# Returns True if user has API calls, False if not.
-def check_user_api_calls(user, max_calls):
-    # See if the user has exceeded daily API calls
-    if user.get_api_calls() < max_calls:
-        return False
-    else:
-        # Calculate the time between users last reset and now
-        # d = (x minutes, y seconds)
-        elapsed_time = datetime.datetime.now() - user.get_last_reset_date()
-        d = divmod(elapsed_time.total_seconds(), 60)
-        # Divide the number of minutes by 60 minutes/hour * 24 hours/day => d / 1440
-        # If at least 1 day (24 hours) has passed since the users last reset, reset their api calls and update db
-        # Otherwise, redirect to error page
-        if (d[0] / 1440) >= 1:
-            user.set_api_calls(0)
-            user.set_last_reset_date(datetime.datetime.now())
-            user.save()
-            return False
-        else:
-            return True
+
+# Checks to see if a user's API calls can be reset, that is, if 1 day (24 hours) has passed since their last reset.
+# Returns True if user's API calls can be reset, else False
+def can_reset_user_api_calls(user_last_reset_date):
+    elapsed_time = datetime.datetime.now() - user_last_reset_date  # Calculate time between last reset and now
+    d = divmod(elapsed_time.total_seconds(), 60)                   # d = (x minutes, y seconds)
+    return True if (d[0] / 1440) >= 1 else False                   # 60 minutes * 24 hours => 1440 minutes = 1 day
 
 
 # Initialize geolocator object for encoding city names to coordinates
@@ -73,11 +58,13 @@ def darksky_request_by_city(geolocator, city):
         location.latitude) + ", " + str(location.longitude)).json()
 
 
+# Generate city numbers for premium user home page
 def load_city_numbers(request):
     city_numbers = []
     for i in range(0, PremiumUser.MAX_NUMBER_OF_CITIES):
         city_numbers.append(i + 1)
     return render(request, '..\\templates\city_number_dropdown_list.html', {'city_numbers': city_numbers})
+
 
 @login_required(login_url='/login')
 def home(request):
@@ -97,8 +84,13 @@ def home(request):
         # Verify the user has not used all their api calls -- we must modifiy DAILY_API_CALLS_PREMIUM_USER based on
         # the number of cities the premium user has saved, since each city will require an API call. If the user has
         # 1 API call left but 3 cities they we exceed their limit; so we subtract the number of saved cities + 1
-        if check_user_api_calls(puser, DAILY_API_CALLS_PREMIUM_USERS-puser.get_number_of_saved_cities()+1):
-            return render(request, '..\\templates\errorNoAPICalls.html')
+        if api_calls >= DAILY_API_CALLS_PREMIUM_USERS-puser.get_number_of_saved_cities()+1:
+            if can_reset_user_api_calls(puser.get_last_reset_date()):
+                api_calls = puser.apiCalls = 0
+                puser.lastResetDate = datetime.datetime.now()
+                puser.save()
+            else:
+                return render(request, '..\\templates\errorNoAPICalls.html')
 
         # This will test true when data has been submitted via form (e.g. user selects 'Add City' button.
         # Here we get the data from the form (city and city number) and update our cities list.
@@ -143,8 +135,13 @@ def home(request):
         weather_data = []
 
         # Verify the user has not used all their API calls
-        if check_user_api_calls(fuser, DAILY_API_CALLS_FREE_USERS):
-            return render(request, '..\\templates\errorNoAPICalls.html')
+        if api_calls >= DAILY_API_CALLS_FREE_USERS:
+            if can_reset_user_api_calls(fuser.get_last_reset_date()):
+                api_calls = fuser.apiCalls = 0
+                fuser.lastResetDate = datetime.datetime.now()
+                fuser.save()
+            else:
+                return render(request, '..\\templates\errorNoAPICalls.html')
 
         # True when user selects 'Add City' button
         if request.method == 'POST':
@@ -191,8 +188,13 @@ def weekly_weather(request):
         weather_data_list = []
 
         # See if the user has exceeded daily API calls
-        if check_user_api_calls(puser, DAILY_API_CALLS_PREMIUM_USERS - puser.get_number_of_saved_cities() + 1):
-            return render(request, '..\\templates\errorNoAPICalls.html')
+        if api_calls >= DAILY_API_CALLS_PREMIUM_USERS-puser.get_number_of_saved_cities()+1:
+            if can_reset_user_api_calls(puser.get_last_reset_date()):
+                api_calls = puser.apiCalls = 0
+                puser.lastResetDate = datetime.datetime.now()
+                puser.save()
+            else:
+                return render(request, '..\\templates\errorNoAPICalls.html')
 
         # Iterate over the user's cities, request forecast data from DarkSky API, then display them
         if cities is not None:
@@ -214,8 +216,13 @@ def weekly_weather(request):
         weather_data = []
 
         # See if the user has exceeded daily API calls
-        if check_user_api_calls(fuser, DAILY_API_CALLS_FREE_USERS):
-            return render(request, '..\\templates\errorNoAPICalls.html')
+        if api_calls >= DAILY_API_CALLS_FREE_USERS:
+            if can_reset_user_api_calls(fuser.get_last_reset_date()):
+                api_calls = fuser.apiCalls = 0
+                fuser.lastResetDate = datetime.datetime.now()
+                fuser.save()
+            else:
+                return render(request, '..\\templates\errorNoAPICalls.html')
 
         if fuser.firstCity is not None:
             darkskyjson = darksky_request_by_city(geolocator, fuser.get_first_city())
@@ -244,8 +251,13 @@ def daily_weather(request):
         weather_data_list = []
 
         # See if the user has exceeded daily API calls
-        if check_user_api_calls(puser, DAILY_API_CALLS_PREMIUM_USERS-puser.get_number_of_saved_cities()+1):
-             return render(request, '..\\templates\errorNoAPICalls.html')
+        if api_calls >= DAILY_API_CALLS_PREMIUM_USERS-puser.get_number_of_saved_cities()+1:
+            if can_reset_user_api_calls(puser.get_last_reset_date()):
+                api_calls = puser.apiCalls = 0
+                puser.lastResetDate = datetime.datetime.now()
+                puser.save()
+            else:
+                return render(request, '..\\templates\errorNoAPICalls.html')
 
         # Iterate over the user's cities, request forecast data from DarkSky API, then display them
         if cities is not None:
@@ -267,8 +279,13 @@ def daily_weather(request):
         weather_data = []
 
         # See if the user has exceeded daily API calls
-        if check_user_api_calls(fuser, DAILY_API_CALLS_FREE_USERS):
-            return render(request, '..\\templates\errorNoAPICalls.html')
+        if api_calls >= DAILY_API_CALLS_FREE_USERS:
+            if can_reset_user_api_calls(fuser.get_last_reset_date()):
+                api_calls = fuser.apiCalls = 0
+                fuser.lastResetDate = datetime.datetime.now()
+                fuser.save()
+            else:
+                return render(request, '..\\templates\errorNoAPICalls.html')
 
         if fuser.firstCity is not None:
             darkskyjson = darksky_request_by_city(geolocator, fuser.get_first_city())
@@ -315,7 +332,6 @@ def signup(request):
             user.profile.password = pbkdf2(form.cleaned_data.get('password1'), 'salt')
             user.profile.email = form.cleaned_data.get('email')
             user.profile.registrationDate = datetime.datetime.today()
-            user.profile.lastLoginDate = datetime.datetime.today()
             # Accounts set to active without confirming email until we have a domain/STMP server to send emails
             user.profile.emailConfirmed = True
             user.save()
@@ -341,14 +357,14 @@ def signup(request):
                                                          fourthCity=None,
                                                          fifthCity=None,
                                                          apiCalls=0,
-                                                         lastResetDate=None)
+                                                         lastResetDate=datetime.datetime.now())
                 premiumuser.save()
             else:
                 freeuser = FreeUser.objects.create(userName=username,
                                                    freeUserId=None,
                                                    firstCity=None,
                                                    apiCalls=0,
-                                                   lastResetDate=None)
+                                                   lastResetDate=datetime.datetime.now())
                 freeuser.save()
 
             return redirect('account_activation_email_sent')

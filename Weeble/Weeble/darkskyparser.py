@@ -1,3 +1,7 @@
+from datetime import date
+import time
+import math
+
 # Since DarkySky does not have icons available online to be used, the 'icon' value returned by the DarkSky API is mapped
 # to a similar open weather icon. Open weather icons are available online and can be used in html with the following:
 # <img src="http://openweathermap.org/img/w/[ICON_VALUE].png" alt="Image">
@@ -17,6 +21,27 @@ DARKSKY_TO_OPEN_WEATHER_ICON = {
         "tornado": "11d"
 }
 
+# Convert epoch time value to day of the week (Sunday, Monday, Tuesday, etc.)
+# Used by get_week_weather to convert time values to days for display
+def convert_epoch_time_to_day_of_the_week(epoch_time_in_seconds):
+    d = date.fromtimestamp(epoch_time_in_seconds)
+    return d.strftime('%A')
+
+# Convert epoch time value to 12hr time (12PM, 1PM, 2PM, etc.)
+# Used by get_day_weather to convert eepoch time values to human readable times for display
+def convert_epoch_time_to_hour_of_the_day(epoch_time_in_seconds):
+    # time.strftime will give us a 24hr time (00:00-24:00), so this dict maps 24 hour times to 12 hour times -- there
+    # is probably an easier/more elegant way to convert times, but this method works
+    time24hr_to_time12hr = {"00:00": "12:00 AM", "01:00":  "1:00 AM", "02:00": "2:00 AM", "03:00": "3:00 AM",
+                            "04:00": "4:00 AM", "05:00": "5:00 AM", "06:00": "6:00 AM", "07:00": "7:00 AM",
+                            "08:00": "8:00 AM", "09:00": "9:00 AM", "10:00": "10:00 AM", "11:00": "11:00 AM",
+                            "12:00": "12:00 PM", "13:00": "1:00 PM", "14:00": "2:00 PM", "15:00": "3:00 PM",
+                            "16:00": "4:00 PM", "17:00": "5:00 PM", "18:00": "6:00 PM", "19:00": "7:00 PM",
+                            "20:00": "8:00 PM", "21:00": "9:00 PM", "22:00": "10:00 PM", "23:00": "11:00 PM",
+                            "24:00": "12:00 PM"}
+    return time24hr_to_time12hr[time.strftime('%H:%M', time.localtime(epoch_time_in_seconds))]
+
+
 # Gives current weather forecast -- basic data
 def get_current_weather_basic(darkskyjson, city):
     current_weather = {
@@ -25,7 +50,7 @@ def get_current_weather_basic(darkskyjson, city):
         "time": darkskyjson["currently"]["time"],
         "summary": darkskyjson["currently"]["summary"],
         "precipProbability": darkskyjson["currently"]["precipProbability"],
-        "temperature": darkskyjson["currently"]["temperature"],
+        "temperature": math.ceil(darkskyjson["currently"]["temperature"]),
         "humidity": darkskyjson["currently"]["humidity"],
         "windSpeed": darkskyjson["currently"]["windSpeed"],
         "windGust": darkskyjson["currently"]["windGust"],
@@ -41,59 +66,24 @@ def get_current_weather_all(darkskyjson):
 # Gives summary of weather for the day in hourly weather forecast. The hourly_weather object here will contain
 # 7 different forecasts, with weather data from the present hour then every 3 hours.
 def get_day_weather_basic(darkskyjson, city):
+
+    hours = []
+    for i in range (0, 24, 1):
+        hours.append({
+            "icon": DARKSKY_TO_OPEN_WEATHER_ICON[darkskyjson["hourly"]["data"][i]["icon"]],
+            "time": convert_epoch_time_to_hour_of_the_day(darkskyjson["hourly"]["data"][i]["time"]),
+            "summary": darkskyjson["hourly"]["data"][i]["summary"],
+            "temperature": math.ceil(darkskyjson["hourly"]["data"][i]["temperature"]),
+            "humidity": math.ceil(darkskyjson["hourly"]["data"][i]["humidity"] * 100),
+            "precipProbability": math.ceil(darkskyjson["hourly"]["data"][i]["precipProbability"] * 100),
+            "windSpeed": math.ceil(darkskyjson["hourly"]["data"][i]["windSpeed"]),
+        })
+
     hourly_weather = {
         "city": city,
         "daySummary": darkskyjson["hourly"]["summary"],
         "icon": DARKSKY_TO_OPEN_WEATHER_ICON[darkskyjson["hourly"]["icon"]],
-        "0hrFromNow": {
-            "summary": darkskyjson["hourly"]["data"][0]["summary"],
-            "temperature": darkskyjson["hourly"]["data"][0]["temperature"],
-            "humidity": darkskyjson["hourly"]["data"][0]["humidity"],
-            "precipProbability": darkskyjson["hourly"]["data"][0]["precipProbability"],
-            "windSpeed": darkskyjson["hourly"]["data"][0]["windSpeed"],
-        },
-        "3hrFromNow": {
-            "summary": darkskyjson["hourly"]["data"][3]["summary"],
-            "temperature": darkskyjson["hourly"]["data"][3]["temperature"],
-            "humidity": darkskyjson["hourly"]["data"][3]["humidity"],
-            "precipProbability": darkskyjson["hourly"]["data"][3]["precipProbability"],
-            "windSpeed": darkskyjson["hourly"]["data"][3]["windSpeed"],
-        },
-        "6hrFromNow": {
-            "summary": darkskyjson["hourly"]["data"][6]["summary"],
-            "temperature": darkskyjson["hourly"]["data"][6]["temperature"],
-            "humidity": darkskyjson["hourly"]["data"][6]["humidity"],
-            "precipProbability": darkskyjson["hourly"]["data"][6]["precipProbability"],
-            "windSpeed": darkskyjson["hourly"]["data"][6]["windSpeed"],
-        },
-        "9hrFromNow": {
-            "summary": darkskyjson["hourly"]["data"][9]["summary"],
-            "temperature": darkskyjson["hourly"]["data"][9]["temperature"],
-            "humidity": darkskyjson["hourly"]["data"][9]["humidity"],
-            "precipProbability": darkskyjson["hourly"]["data"][9]["precipProbability"],
-            "windSpeed": darkskyjson["hourly"]["data"][9]["windSpeed"],
-        },
-        "12hrFromNow": {
-            "summary": darkskyjson["hourly"]["data"][12]["summary"],
-            "temperature": darkskyjson["hourly"]["data"][12]["temperature"],
-            "humidity": darkskyjson["hourly"]["data"][12]["humidity"],
-            "precipProbability": darkskyjson["hourly"]["data"][12]["precipProbability"],
-            "windSpeed": darkskyjson["hourly"]["data"][12]["windSpeed"],
-        },
-        "15hrFromNow": {
-            "summary": darkskyjson["hourly"]["data"][15]["summary"],
-            "temperature": darkskyjson["hourly"]["data"][15]["temperature"],
-            "humidity": darkskyjson["hourly"]["data"][15]["humidity"],
-            "precipProbability": darkskyjson["hourly"]["data"][15]["precipProbability"],
-            "windSpeed": darkskyjson["hourly"]["data"][15]["windSpeed"],
-        },
-        "18hrFromNow": {
-            "summary": darkskyjson["hourly"]["data"][18]["summary"],
-            "temperature": darkskyjson["hourly"]["data"][18]["temperature"],
-            "humidity": darkskyjson["hourly"]["data"][18]["humidity"],
-            "precipProbability": darkskyjson["hourly"]["data"][18]["precipProbability"],
-            "windSpeed": darkskyjson["hourly"]["data"][18]["windSpeed"],
-        },
+        "hours": hours
     }
     return hourly_weather
 
@@ -104,87 +94,28 @@ def get_day_weather_all(darkskyjson):
 
 # Gives summary of weather for the week by daily forecasts -- basic data
 def get_week_weather_basic(darkskyjson, city):
+
+    days = []
+    for i in range(0, 8):
+        days.append({
+            "icon": DARKSKY_TO_OPEN_WEATHER_ICON[darkskyjson["daily"]["data"][i]["icon"]],
+            "time": convert_epoch_time_to_day_of_the_week(darkskyjson["daily"]["data"][i]["time"]),
+            "summary": darkskyjson["daily"]["data"][i]["summary"],
+            "precipProbability": math.ceil(darkskyjson["daily"]["data"][i]["precipProbability"] * 100),
+#            "precipType": darkskyjson["daily"]["data"][i]["precipType"],
+            "temperatureHigh": math.ceil(darkskyjson["daily"]["data"][i]["temperatureHigh"]),
+            "temperatureLow": math.ceil(darkskyjson["daily"]["data"][i]["temperatureLow"]),
+            "humidity": math.ceil(darkskyjson["daily"]["data"][i]["humidity"] * 100),
+            "windSpeed": math.ceil(darkskyjson["daily"]["data"][i]["windSpeed"]),
+            "windGust": darkskyjson["daily"]["data"][i]["windGust"],
+            "visibility": darkskyjson["daily"]["data"][i]["visibility"]
+        })
+
     weekly_weather = {
         "city": city,
         "weekSummary": darkskyjson["daily"]["summary"],
         "icon": DARKSKY_TO_OPEN_WEATHER_ICON[darkskyjson["daily"]["icon"]],
-        "day1": {
-            "summary": darkskyjson["daily"]["data"][0]["summary"],
-            "precipProbability": darkskyjson["daily"]["data"][0]["precipProbability"],
-            "precipType" : darkskyjson["daily"]["data"][0]["precipType"],
-            "temperatureHigh": darkskyjson["daily"]["data"][0]["temperatureHigh"],
-            "temperatureLow": darkskyjson["daily"]["data"][0]["temperatureLow"],
-            "humidity": darkskyjson["daily"]["data"][0]["humidity"],
-            "windSpeed": darkskyjson["daily"]["data"][0]["windSpeed"],
-            "windGust": darkskyjson["daily"]["data"][0]["windGust"],
-            "visibility": darkskyjson["daily"]["data"][0]["visibility"]
-        },
-        "day2": {
-            "summary": darkskyjson["daily"]["data"][1]["summary"],
-            "precipProbability": darkskyjson["daily"]["data"][1]["precipProbability"],
-            "precipType": darkskyjson["daily"]["data"][1]["precipType"],
-            "temperatureHigh": darkskyjson["daily"]["data"][1]["temperatureHigh"],
-            "temperatureLow": darkskyjson["daily"]["data"][1]["temperatureLow"],
-            "humidity": darkskyjson["daily"]["data"][1]["humidity"],
-            "windSpeed": darkskyjson["daily"]["data"][1]["windSpeed"],
-            "windGust": darkskyjson["daily"]["data"][1]["windGust"],
-            "visibility": darkskyjson["daily"]["data"][1]["visibility"]
-        },
-        "day3": {
-            "summary": darkskyjson["daily"]["data"][2]["summary"],
-            "precipProbability": darkskyjson["daily"]["data"][2]["precipProbability"],
-            "precipType": darkskyjson["daily"]["data"][2]["precipType"],
-            "temperatureHigh": darkskyjson["daily"]["data"][2]["temperatureHigh"],
-            "temperatureLow": darkskyjson["daily"]["data"][2]["temperatureLow"],
-            "humidity": darkskyjson["daily"]["data"][2]["humidity"],
-            "windSpeed": darkskyjson["daily"]["data"][2]["windSpeed"],
-            "windGust": darkskyjson["daily"]["data"][2]["windGust"],
-            "visibility": darkskyjson["daily"]["data"][2]["visibility"]
-        },
-        "day4": {
-            "summary": darkskyjson["daily"]["data"][3]["summary"],
-            "precipProbability": darkskyjson["daily"]["data"][3]["precipProbability"],
-            "precipType": darkskyjson["daily"]["data"][3]["precipType"],
-            "temperatureHigh": darkskyjson["daily"]["data"][3]["temperatureHigh"],
-            "temperatureLow": darkskyjson["daily"]["data"][3]["temperatureLow"],
-            "humidity": darkskyjson["daily"]["data"][3]["humidity"],
-            "windSpeed": darkskyjson["daily"]["data"][3]["windSpeed"],
-            "windGust": darkskyjson["daily"]["data"][3]["windGust"],
-            "visibility": darkskyjson["daily"]["data"][3]["visibility"]
-        },
-        "day5": {
-            "summary": darkskyjson["daily"]["data"][4]["summary"],
-            "precipProbability": darkskyjson["daily"]["data"][4]["precipProbability"],
-            "precipType": darkskyjson["daily"]["data"][4]["precipType"],
-            "temperatureHigh": darkskyjson["daily"]["data"][4]["temperatureHigh"],
-            "temperatureLow": darkskyjson["daily"]["data"][4]["temperatureLow"],
-            "humidity": darkskyjson["daily"]["data"][4]["humidity"],
-            "windSpeed": darkskyjson["daily"]["data"][4]["windSpeed"],
-            "windGust": darkskyjson["daily"]["data"][4]["windGust"],
-            "visibility": darkskyjson["daily"]["data"][4]["visibility"]
-        },
-        "day6": {
-            "summary": darkskyjson["daily"]["data"][5]["summary"],
-            "precipProbability": darkskyjson["daily"]["data"][5]["precipProbability"],
-            "precipType": darkskyjson["daily"]["data"][5]["precipType"],
-            "temperatureHigh": darkskyjson["daily"]["data"][5]["temperatureHigh"],
-            "temperatureLow": darkskyjson["daily"]["data"][5]["temperatureLow"],
-            "humidity": darkskyjson["daily"]["data"][5]["humidity"],
-            "windSpeed": darkskyjson["daily"]["data"][5]["windSpeed"],
-            "windGust": darkskyjson["daily"]["data"][5]["windGust"],
-            "visibility": darkskyjson["daily"]["data"][5]["visibility"]
-        },
-        "day7": {
-            "summary": darkskyjson["daily"]["data"][6]["summary"],
-            "precipProbability": darkskyjson["daily"]["data"][6]["precipProbability"],
-            "precipType": darkskyjson["daily"]["data"][6]["precipType"],
-            "temperatureHigh": darkskyjson["daily"]["data"][6]["temperatureHigh"],
-            "temperatureLow": darkskyjson["daily"]["data"][6]["temperatureLow"],
-            "humidity": darkskyjson["daily"]["data"][6]["humidity"],
-            "windSpeed": darkskyjson["daily"]["data"][6]["windSpeed"],
-            "windGust": darkskyjson["daily"]["data"][6]["windGust"],
-            "visibility": darkskyjson["daily"]["data"][6]["visibility"]
-        }
+        "days": days,
     }
     return weekly_weather
 

@@ -71,7 +71,7 @@ class FreeUser(models.Model):
     freeUserId = models.AutoField(null=False, unique=True, primary_key=True, db_column='FreeUserID')
     firstCity = models.CharField(null=True, max_length=30, db_column='FirstCity')
     apiCalls = models.IntegerField(null=False, default=0, db_column='APICalls')
-    lastResetDate = models.DateTimeField(null=False, auto_now=False, auto_now_add=True, db_column='LastResetDate')
+    lastResetDate = models.DateTimeField(null=False, auto_now=False, auto_now_add=False, db_column='LastResetDate')
 
     def get_user_name(self):
         return self.userName
@@ -115,7 +115,7 @@ class PremiumUser(models.Model):
     fourthCity = models.CharField(null=True, max_length=30, db_column='FourthCity')
     fifthCity = models.CharField(null=True, max_length=30, db_column='fifthCity')
     apiCalls = models.IntegerField(null=False, default=0, db_column='APICalls')
-    lastResetDate = models.DateTimeField(null=False, auto_now=False, auto_now_add=True, db_column='LastResetDate')
+    lastResetDate = models.DateTimeField(null=False, auto_now=False, auto_now_add=False, db_column='LastResetDate')
 
     def get_user_name(self):
         return self.userName
