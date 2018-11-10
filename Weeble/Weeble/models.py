@@ -24,7 +24,7 @@ class Profile(models.Model):
     registrationDate = models.DateField(null=False, auto_now=False, auto_now_add=True, db_column='RegistrationDate')
     lastLoginDate = models.DateField(null=True, auto_now=False, auto_now_add=False, db_column='LastLoginDate')
     isPremium = models.BooleanField(default=False, db_column='isPremium')
-    emailConfirmed = models.BooleanField(null=False, default=False)
+    emailConfirmed = models.BooleanField(null=False, default=False, db_column='EmailConfirmed')
 
     def get_user_id(self):
         return self.user
@@ -47,9 +47,6 @@ class Profile(models.Model):
     def get_registration_date(self):
         return self.registrationDate
 
-    def get_last_login_date(self):
-        return self.lastLoginDate
-
 
 # When a new user registers, an entry is created in the django auth_user db table, and automatically linked to an
 # a new entry in the users db table.
@@ -57,8 +54,7 @@ class Profile(models.Model):
 def update_user_profile(sender, instance, created, **kwargs):
     if created:
         Profile.objects.create(user=instance, userName="", password="", email="",
-                               registrationDate=datetime.date.today(), lastLoginDate=datetime.date.today(),
-                               isPremium=False, emailConfirmed=False)
+                               registrationDate=datetime.date.today(), isPremium=False, emailConfirmed=False)
     instance.profile.save()
 
 
