@@ -2659,6 +2659,16 @@ a.box:active {
   position: relative;
 }
 
+.row {
+  display: flex;
+}
+
+.row:after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
 @media screen and (min-width: 1088px) {
   .container {
     max-width: 960px;
@@ -7542,7 +7552,7 @@ label.panel-block:hover {
   flex-basis: 0;
   flex-grow: 1;
   flex-shrink: 1;
-  padding: 0.75rem;
+  padding: 0.5rem;
 }
 
 .columns.is-mobile > .column.is-narrow {

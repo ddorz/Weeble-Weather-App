@@ -22,7 +22,6 @@ class Profile(models.Model):
     password = models.CharField(null=False, blank=False, max_length=256, db_column='Password')
     email = models.CharField(null=False, blank=False, unique=True, max_length=128, db_column='Email')
     registrationDate = models.DateField(null=False, auto_now=False, auto_now_add=True, db_column='RegistrationDate')
-    lastLoginDate = models.DateField(null=True, auto_now=False, auto_now_add=False, db_column='LastLoginDate')
     isPremium = models.BooleanField(default=False, db_column='isPremium')
     emailConfirmed = models.BooleanField(null=False, default=False, db_column='EmailConfirmed')
 

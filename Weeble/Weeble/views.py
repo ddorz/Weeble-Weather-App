@@ -112,13 +112,15 @@ def home(request):
         form = CityFormPremiumUser()
 
         # Iterate over the user's cities, request forecast data from DarkSky API, then display data
+        i = 1
         if cities is not None:
-            user_needs_update = True
             for city in cities:
                 darkskyjson = darksky_request_by_city(geolocator, city)
                 weather = Parser.get_current_weather_basic(darkskyjson, city)
+                weather["city_number"] = i
                 weather_data.append(weather)
                 api_calls = api_calls + 1
+                i = i + 1
 
         # Save updated user object
         puser.apiCalls = api_calls
@@ -163,6 +165,7 @@ def home(request):
                 weather = Parser.get_current_weather_basic(darkskyjson, city)
                 weather_data.append(weather)
                 api_calls = api_calls + 1
+                i = i + 1
 
         # Save updated user object to database
         fuser.apiCalls = api_calls
@@ -180,6 +183,12 @@ def weekly_weather(request):
 
     # Redirect to either free user home page or premium user home paage depending on the on users account type
     if profile.isPremium:
+        COLUMN_FORMAT = {1: "column is-offset-6 is-6",
+                         2: "column is-offset-4 is-4",
+                         3: "column is-offset-2 is-8",
+                         4: "column is-offset-2 is-8",
+                         5: "column is-offset-1 is-10"}
+
         puser = PremiumUser.objects.get(userName=profile.userName)
         api_calls = 0 if puser.apiCalls is None else puser.apiCalls
         cities = puser.get_saved_cities()
@@ -205,7 +214,7 @@ def weekly_weather(request):
         # Save updated user object
         puser.apiCalls = api_calls
         puser.save()
-        context = {"weather_data_list": weather_data_list}
+        context = {"weather_data_list": weather_data_list, "column_format": COLUMN_FORMAT[len(cities)]}
         return render(request, '..\\templates\premiumuser_weekly_weather.html', context)
     else:
         # Get FreeUser object corresponding to username of lssogged in user
@@ -243,6 +252,11 @@ def daily_weather(request):
 
     # Redirect to either free user home page or premium user home paage depending on the on users account type
     if profile.isPremium:
+        COLUMN_FORMAT = {1: "column is-offset-6 is-6",
+                         2: "column is-offset-4 is-4",
+                         3: "column is-offset-2 is-8",
+                         4: "column is-offset-2 is-8",
+                         5: "column is-offset-1 is-10"}
         puser = PremiumUser.objects.get(userName=profile.userName)
         api_calls = 0 if puser.apiCalls is None else puser.apiCalls
         cities = puser.get_saved_cities()
@@ -268,7 +282,7 @@ def daily_weather(request):
         # Save updated user object
         puser.apiCalls = api_calls
         puser.save()
-        context = {"weather_data_list": weather_data_list}
+        context = {"weather_data_list": weather_data_list, "column_format": COLUMN_FORMAT[len(cities)]}
         return render(request, '..\\templates\premiumuser_daily_weather.html', context)
     else:
         # Get FreeUser object corresponding to username of logged in user
