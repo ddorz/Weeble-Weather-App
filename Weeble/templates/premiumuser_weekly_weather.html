@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Weeble</title>
+    <title>Webble</title>
     {% load static %}
     <link rel="stylesheet" type="text/css" href="{% static "\Weeble\css\stylesheet1.css" %}">
 </head>
@@ -14,18 +14,17 @@
         <div class="hero-body">
             <div class="container">
                 <h1 class="title">
-                    Weeble Weather App
+                    Webble Weather App
                 </h1>
             </div>
         </div>
     </section>
     <header>
       {% if user.is_authenticated %}
-       <a href="{% url 'home' %}">Home</a> / <a href="{% url 'premiumuser_daily_weather' %}">Daily Forecast</a> / <a href="{% url 'logout' %}">Logout</a>
+       <a href="{% url 'home' %}">Home</a> / <a href="{% url 'premiumuser_daily_weather' %}">Daily Forecast</a> / <a href="{% url 'logout' %}">Logout</a> / <a href="http://127.0.0.1:8000/faq/">FAQ</a>
       {% else %}
         <a href="{% url 'login' %}">Login</a> / <a href="{% url 'signup' %}">Signup</a>
       {% endif %}
-      <hr>
     </header>
     <section class="section">
         <div class="row">
@@ -84,7 +83,6 @@
          {% endfor %}
         </div>
     </section>
-    <footer class="footer">
-    </footer>
+
 </body>
 </html>

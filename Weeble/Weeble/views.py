@@ -165,7 +165,6 @@ def home(request):
                 weather = Parser.get_current_weather_basic(darkskyjson, city)
                 weather_data.append(weather)
                 api_calls = api_calls + 1
-                i = i + 1
 
         # Save updated user object to database
         fuser.apiCalls = api_calls
@@ -313,7 +312,7 @@ def daily_weather(request):
 
 # TODO - Add home page -- currently redirects to login page
 def index(request):
-    return redirect('login')
+     return render(request, '..\\templates\weeble\\index.html')
 
 
 def signup(request):
@@ -335,7 +334,7 @@ def signup(request):
                 return render(request, '..\\templates\signup.html', {'form': form})
 
             user = form.save(commit=False)
-            user.is_active = False
+            user.is_active = True
             # Accounts active without confrimation until emails are sending
             # user.is_active = False
             user.save()
@@ -346,7 +345,7 @@ def signup(request):
             user.profile.email = form.cleaned_data.get('email')
             user.profile.registrationDate = datetime.datetime.today()
             # Accounts set to active without confirming email until we have a domain/STMP server to send emails
-            user.profile.emailConfirmed = False
+            user.profile.emailConfirmed = True
             user.profile.save()
 
             current_site = get_current_site(request)

@@ -9,7 +9,7 @@ class WeebleTest(TestCase):
 
     def create_user(self, isPremium, userName, password, email):
         return Profile.objects.create(userId=None, isPremium=isPremium, userName=userName, password=password,
-                                      email=email, registrationDate=None, lastLoginDate=None, emailConfirmed=False)
+                                      email=email, registrationDate=None, lastLoginDate=None)
 
     def create_free_user(self, user):
         return FreeUser.objects.create(userId=user.get_user_id(), freeUserId=None, firstCity=None,
