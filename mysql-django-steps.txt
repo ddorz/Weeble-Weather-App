@@ -30,7 +30,8 @@ Creating Weeble Database on localhost
 	Password VARCHAR(30) NOT NULL,
 	Email VARCHAR(30) NOT NULL,
 	RegistrationDate DATE NOT NULL,
-	isPremium BIT,
+	isPremium TINYINT(1),
+	EmailConfirmed TINYINT(1),
 	LastLoginDate DATE,
 	PRIMARY KEY (user_id)
 ); 

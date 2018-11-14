@@ -23,10 +23,9 @@ import requests
 
 DAILY_API_CALLS_FREE_USERS = 25
 DAILY_API_CALLS_PREMIUM_USERS = 66
-# TODO - Values increased for debugging -- set to correct values before release
-MAX_USERS = 2000
-MAX_FREE_USERS = 1000
-MAX_PREMIUM_USERS = 1000
+MAX_USERS = 20
+MAX_FREE_USERS = 10
+MAX_PREMIUM_USERS = 10
 
 
 # Checks to see if a user's API calls can be reset, that is, if 1 day (24 hours) has passed since their last reset.
@@ -334,7 +333,7 @@ def signup(request):
                 return render(request, '..\\templates\signup.html', {'form': form})
 
             user = form.save(commit=False)
-            user.is_active = True
+            user.is_active = False
             # Accounts active without confrimation until emails are sending
             # user.is_active = False
             user.save()
@@ -345,7 +344,7 @@ def signup(request):
             user.profile.email = form.cleaned_data.get('email')
             user.profile.registrationDate = datetime.datetime.today()
             # Accounts set to active without confirming email until we have a domain/STMP server to send emails
-            user.profile.emailConfirmed = True
+            user.profile.emailConfirmed = False
             user.profile.save()
 
             current_site = get_current_site(request)

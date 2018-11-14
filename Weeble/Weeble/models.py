@@ -23,7 +23,7 @@ class Profile(models.Model):
     email = models.CharField(null=False, blank=False, unique=True, max_length=128, db_column='Email')
     registrationDate = models.DateField(null=False, auto_now=False, auto_now_add=True, db_column='RegistrationDate')
     isPremium = models.BooleanField(default=False, db_column='isPremium')
-    
+    emailConfirmed = models.BooleanField(null=False, default=False, db_column='EmailConfirmed')
 
     def get_user_id(self):
         return self.user
@@ -53,7 +53,7 @@ class Profile(models.Model):
 def update_user_profile(sender, instance, created, **kwargs):
     if created:
         Profile.objects.create(user=instance, userName="", password="", email="",
-                               registrationDate=datetime.date.today(), isPremium=False)
+                               registrationDate=datetime.date.today(), isPremium=False, emailConfirmed=False)
     instance.profile.save()
 
 
