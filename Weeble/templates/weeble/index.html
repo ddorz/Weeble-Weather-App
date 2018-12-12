@@ -1,0 +1,55 @@
+<!-- Weeble/templates/Weeble/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Weeble</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.css" />
+</head>
+<body>
+    <section class="hero is-primary">
+        <div class="hero-body">
+            <div class="container">
+                <h1 class="title">
+                    Weeble Weather App
+                </h1>
+            </div>
+        </div>
+    </section>
+    <header>
+      {% if user.is_authenticated %}
+        <a href="{% url 'logout' %}">logout</a>
+      {% else %}
+        <a href="{% url 'login' %}">login</a> / <a href="{% url 'signup' %}">signup</a>
+      {% endif %}
+      <hr>
+    </header>
+    <section class="section">
+        <div class="container">
+            <div class="columns">
+                <div class="column is-offset-4 is-4">
+                    <form method="POST">
+                        {% csrf_token %}
+                        <div class="field has-addons">
+                            <div class="control">
+                                <button class="button is-info">
+                                    Log In
+                                </button>
+                            </div>
+                            <div class="control">
+                                <button class="button is-info">
+                                    Sign Up
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+    <footer class="footer">
+    </footer>
+</body>
+</html>

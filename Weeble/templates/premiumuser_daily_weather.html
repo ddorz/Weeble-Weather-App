@@ -1,0 +1,86 @@
+<!-- Weeble/templates/Weeble/freeuser_daily_weather.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Weeble</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.css" />
+</head>
+<body>
+    <section class="hero is-primary">
+        <div class="hero-body">
+            <div class="container">
+                <h1 class="title">
+                    Weeble Weather App
+                </h1>
+            </div>
+        </div>
+    </section>
+    <header>
+      {% if user.is_authenticated %}
+       <a href="{% url 'home' %}">Home</a> / <a href="{% url 'premiumuser_weekly_weather' %}">Weekly Forecast</a> / <a href="{% url 'logout' %}">Logout</a>
+      {% else %}
+        <a href="{% url 'login' %}">Login</a> / <a href="{% url 'signup' %}">Signup</a>
+      {% endif %}
+      <hr>
+    </header>
+    <section class="section">
+        <div class="container">
+            {% for weather_data in weather_data_list %}
+            <div class="columns">
+                <div class="column is-offset-4 is-4">
+                    <div class="box">
+                        <article class="media">
+                            <div class="media-left">
+                                <figure class="image is-50x50">
+                                    <img src="http://openweathermap.org/img/w/{{ weather_data.icon }}.png" alt="Image">
+                                </figure>
+                            </div>
+                            <div class="media-content">
+                                <div class="content">
+                                    <p>
+                                        <span class="title">{{ weather_data.city }}</span>
+                                        <br>
+                                        <span class="subtitle">Daily Forecast: {{ weather_data.daySummary }}</span>
+                                        <br> {{ weather.summary }}
+                                    </p>
+                                </div>
+                            </div>
+                        </article>
+                    </div>
+                    {% for weather in weather_data.hours %}
+                    <div class="box">
+                        <article class="media">
+                            <div class="media-left">
+                                <figure class="image is-50x50">
+                                    <img src="http://openweathermap.org/img/w/{{ weather.icon }}.png" alt="Image">
+                                </figure>
+                            </div>
+                            <div class="media-content">
+                                <div class="content">
+                                    <p>
+                                        <span class="title">{{ weather.time }}</span>
+                                        <br> {{ weather.summary }}
+                                        <br>
+                                        <span class="subtitle">Temperature: {{ weather.temperature }}° F</span>
+                                        <br>
+                                        <span class="subtitle">Humidity: {{ weather.humidity }}%</span>
+                                        <br>
+                                        <span class="subtitle">Chance of rain: {{ weather.precipProbability }}%</span>
+                                    </p>
+                                </div>
+                            </div>
+                        </article>
+                    </div>
+                  {% endfor %}
+                </div>
+            </div>
+         {% endfor %}
+        </div>
+    </section>
+    <footer class="footer">
+    </footer>
+</body>
+</html>

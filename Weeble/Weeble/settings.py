@@ -27,16 +27,23 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+LOGIN_URL = '/login'
+
+LOGIN_REDIRECT_URL = '/home'
+
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 # Application definition
 
 INSTALLED_APPS = [
+    'Weeble.apps.WeebleConfig',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.db.models',
 ]
 
 MIDDLEWARE = [
@@ -76,7 +83,11 @@ WSGI_APPLICATION = 'Weeble.wsgi.application'
 
 DATABASES = {
     'default': {
+<<<<<<< HEAD
         'ENGINER': 'test',
+=======
+        'ENGINE': 'mysql.connector.django',
+>>>>>>> ae8c8f0bb3cd65e409a726ca47ffba9465d2da15
         'NAME': 'weeble',
         'USER': 'root',
         'PASSWORD': 'toor',
@@ -87,7 +98,6 @@ DATABASES = {
         },
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/2.1/ref/settings/#auth-password-validators
@@ -119,7 +129,7 @@ USE_I18N = True
 
 USE_L10N = True
 
-USE_TZ = True
+USE_TZ = False
 
 
 # Static files (CSS, JavaScript, Images)
