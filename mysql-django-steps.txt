@@ -30,25 +30,30 @@ Creating Weeble Database on localhost
 	Password VARCHAR(30) NOT NULL,
 	Email VARCHAR(30) NOT NULL,
 	RegistrationDate DATE NOT NULL,
-	isPremium BIT,
+	isPremium TINYINT(1),
+	EmailConfirmed TINYINT(1),
 	LastLoginDate DATE,
 	PRIMARY KEY (user_id)
 ); 
 7.  Run mysql> CREATE TABLE PremiumUsers (
-	userNameINT NOT NULL,
+	userName INT NOT NULL,
+	PremiumUserID INT NOT NULL AUTO_INCREMENT,
 	FirstCity VARCHAR(30),
 	SecondCity VARCHAR(30),
 	ThirdCity VARCHAR(30),
 	FourthCity VARCHAR(30),
 	FifthCity VARCHAR(30),
 	APICalls INT NOT NULL,
-	LastResetDate DATETIME NOT NULL
+	LastResetDate DATETIME NOT NULL,
+	PRIMARY KEY (PremiumUserID)
 );
 8.  Run mysql> CREATE TABLE FreeUsers (
 	userName INT NOT NULL,
+	FreeUserID INT NOT NULL AUTO_INCREMENT,
 	FirstCity VARCHAR(30),
  	APICalls INT NOT NULL,
-	LastResetDate DATETIME NOT NULL
+	LastResetDate DATETIME NOT NULL,
+	PRIMARY_KEY(FreeUserID)
 );
 9.  Run mysql> USE weeble;
 10. Run mysql> CREATE USER 'djangouser'@'localhost' IDENTIFIED BY 'toor';

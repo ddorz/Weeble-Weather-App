@@ -1,12 +1,10 @@
-from django.shortcuts import render, redirect
 from django.contrib.auth import login, authenticate
 from django.contrib.auth.decorators import login_required
 from django.contrib.sites.shortcuts import get_current_site
 from django.shortcuts import render, redirect
 from django.utils.encoding import force_bytes
-from django.utils.http import urlsafe_base64_encode
 from django.template.loader import render_to_string
-from django.utils.encoding import force_text
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.contrib.auth.models import User
 from Weeble.forms import CityFormFreeUser, CityFormPremiumUser
 from Weeble.forms import SignUpForm
@@ -25,10 +23,9 @@ import requests
 
 DAILY_API_CALLS_FREE_USERS = 25
 DAILY_API_CALLS_PREMIUM_USERS = 66
-# TODO - Values increased for debugging -- set to correct values before release
-MAX_USERS = 2000
-MAX_FREE_USERS = 1000
-MAX_PREMIUM_USERS = 1000
+MAX_USERS = 20
+MAX_FREE_USERS = 10
+MAX_PREMIUM_USERS = 10
 
 
 # Checks to see if a user's API calls can be reset, that is, if 1 day (24 hours) has passed since their last reset.
@@ -114,13 +111,15 @@ def home(request):
         form = CityFormPremiumUser()
 
         # Iterate over the user's cities, request forecast data from DarkSky API, then display data
+        i = 1
         if cities is not None:
-            user_needs_update = True
             for city in cities:
                 darkskyjson = darksky_request_by_city(geolocator, city)
                 weather = Parser.get_current_weather_basic(darkskyjson, city)
+                weather["city_number"] = i
                 weather_data.append(weather)
                 api_calls = api_calls + 1
+                i = i + 1
 
         # Save updated user object
         puser.apiCalls = api_calls
@@ -164,7 +163,7 @@ def home(request):
                 darkskyjson = darksky_request_by_city(geolocator, city)
                 weather = Parser.get_current_weather_basic(darkskyjson, city)
                 weather_data.append(weather)
-                api_calls + api_calls + 1
+                api_calls = api_calls + 1
 
         # Save updated user object to database
         fuser.apiCalls = api_calls
@@ -182,6 +181,12 @@ def weekly_weather(request):
 
     # Redirect to either free user home page or premium user home paage depending on the on users account type
     if profile.isPremium:
+        COLUMN_FORMAT = {1: "column is-offset-6 is-6",
+                         2: "column is-offset-4 is-4",
+                         3: "column is-offset-2 is-8",
+                         4: "column is-offset-2 is-8",
+                         5: "column is-offset-1 is-10"}
+
         puser = PremiumUser.objects.get(userName=profile.userName)
         api_calls = 0 if puser.apiCalls is None else puser.apiCalls
         cities = puser.get_saved_cities()
@@ -207,7 +212,7 @@ def weekly_weather(request):
         # Save updated user object
         puser.apiCalls = api_calls
         puser.save()
-        context = {"weather_data_list": weather_data_list}
+        context = {"weather_data_list": weather_data_list, "column_format": COLUMN_FORMAT[len(cities)]}
         return render(request, '..\\templates\premiumuser_weekly_weather.html', context)
     else:
         # Get FreeUser object corresponding to username of lssogged in user
@@ -245,6 +250,11 @@ def daily_weather(request):
 
     # Redirect to either free user home page or premium user home paage depending on the on users account type
     if profile.isPremium:
+        COLUMN_FORMAT = {1: "column is-offset-6 is-6",
+                         2: "column is-offset-4 is-4",
+                         3: "column is-offset-2 is-8",
+                         4: "column is-offset-2 is-8",
+                         5: "column is-offset-1 is-10"}
         puser = PremiumUser.objects.get(userName=profile.userName)
         api_calls = 0 if puser.apiCalls is None else puser.apiCalls
         cities = puser.get_saved_cities()
@@ -270,7 +280,7 @@ def daily_weather(request):
         # Save updated user object
         puser.apiCalls = api_calls
         puser.save()
-        context = {"weather_data_list": weather_data_list}
+        context = {"weather_data_list": weather_data_list, "column_format": COLUMN_FORMAT[len(cities)]}
         return render(request, '..\\templates\premiumuser_daily_weather.html', context)
     else:
         # Get FreeUser object corresponding to username of logged in user
@@ -301,7 +311,7 @@ def daily_weather(request):
 
 # TODO - Add home page -- currently redirects to login page
 def index(request):
-    return redirect('login')
+     return render(request, '..\\templates\weeble\\index.html')
 
 
 def signup(request):
@@ -323,6 +333,7 @@ def signup(request):
                 return render(request, '..\\templates\signup.html', {'form': form})
 
             user = form.save(commit=False)
+            user.is_active = False
             # Accounts active without confrimation until emails are sending
             # user.is_active = False
             user.save()
@@ -333,19 +344,19 @@ def signup(request):
             user.profile.email = form.cleaned_data.get('email')
             user.profile.registrationDate = datetime.datetime.today()
             # Accounts set to active without confirming email until we have a domain/STMP server to send emails
-            user.profile.emailConfirmed = True
-            user.save()
+            user.profile.emailConfirmed = False
+            user.profile.save()
 
             current_site = get_current_site(request)
             subject = 'Confirm your email to activate your Weeble Account'
             message = render_to_string('..\\templates\\account_activation.html', {
                 'user': user,
                 'domain': current_site.domain,
-                'uid': urlsafe_base64_encode(force_bytes(user.pk)),
+                'uid': urlsafe_base64_encode(force_bytes(user.pk)).decode(),
                 'token': account_activation_token.make_token(user),
             })
+
             user.email_user(subject, message)
-            raw_password = form.cleaned_data.get('password1')
             username = form.cleaned_data.get('username')
 
             if form.cleaned_data.get('isPremium'):
@@ -379,24 +390,20 @@ def account_activation_sent(request):
 
 def activate(request, uidb64, token):
     try:
-        uid = force_text(urlsafe_base64_encode(uidb64))
+        uid = urlsafe_base64_decode(uidb64).decode()
         # Get django.contrib.auth.User object. This is the django auth_user table
         user = User.objects.get(pk=uid)
+        user.profile.emailConfirmed = False
     except (TypeError, ValueError, OverflowError, User.DoesNotExist):
         user = None
 
     if user is not None and account_activation_token.check_token(user, token):
         # Set user object to active and save
         user.is_active = True
-
+        user.is_superuser = False
+        user.is_staff = False
+        user.profile.emailConfirmed = True
         user.save()
-
-        # Get Profile object. This is from our 'users' table.
-        # Update email confirmed field to true and save to db.
-        user = Profile.objects.get(username=user.username)
-        user.emailConfirmed = True
-        user.save()
-
         login(request, user)
         return redirect('home')
     else:

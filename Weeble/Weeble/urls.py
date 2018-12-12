@@ -18,6 +18,8 @@ from django.urls import path
 from django.conf.urls import url
 from django.contrib.auth import views as auth_views
 from . import views
+from django.conf import settings
+from django.conf.urls.static import static
 
 urlpatterns = [
     # Path for index view -- This will be the home page for users not logged in
@@ -58,5 +60,4 @@ urlpatterns = [
     # Path for loading city numbers for dropdown menu on premium user home page
     path('load_city_numbers/', views.load_city_numbers, name='load_city_numbers'),
 
-
-]
+] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
